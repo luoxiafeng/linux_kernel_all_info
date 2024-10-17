@@ -2,18 +2,36 @@
 
 {% block content %}
 <h2>设备树层次结构</h2>
-<ul>
-    {% for node in device_tree %}
-        <li>
-            <span class="node" onclick="toggleChildren(this)">{{ node }}</span>
-            <ul style="display: none;">
-                {% for child in device_tree[node] %}
-                    <li>
-                        <span class="node" onclick="toggleChildren(this)">{{ child }}</span>
-                    </li>
-                {% endfor %}
-            </ul>
-        </li>
-    {% endfor %}
-</ul>
+{% if root %}
+    <ul>
+        {% macro render_tree(node) %}
+            <li>
+                <span class="node" onclick="toggleChildren(this)">{{ node.name }}</span>
+                {% if node.children %}
+                    <ul style="display: none;">
+                        {% for child in node.children %}
+                            {{ render_tree(child) }}  <!-- 递归渲染子节点 -->
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </li>
+        {% endmacro %}
+        
+        {{ render_tree(root) }}  <!-- 渲染根节点 -->
+    </ul>
+{% else %}
+    <p>未找到设备树文件。</p>
+{% endif %}
+
+<script>
+    function toggleChildren(element) {
+        var children = element.nextElementSibling;
+        if (children.style.display === "none") {
+            children.style.display = "block";
+        } else {
+            children.style.display = "none";
+        }
+    }
+</script>
+    
 {% endblock %}

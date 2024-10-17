@@ -5,42 +5,48 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+class Node:
+    def __init__(self, name, path, parent=None):
+        self.name = name          # 节点名字
+        self.path = path          # 节点路径
+        self.parent = parent      # 父节点
+        self.children = []        # 子节点列表
+
+    def add_child(self, child_node):
+        self.children.append(child_node)  # 添加子节点
+
+# 定义全局变量
+global_path = "/"
+parent_node = None
+
 def parse_dts_file(dts_file):
+    global global_path, parent_node
+    root = Node(name="root", path="/")  # 创建根节点
+    parent_node = root  # 初始时，父节点为根节点
+
     with open(dts_file, 'r') as file:
-        lines = file.readlines()
+        for line in file:
+            stripped_line = line.strip()
 
-    depth = 0
-    node_stack = []  # 用于存储节点的栈
-    root_nodes = []  # 用于存储根节点
-    children = {}  # 存储根节点的子节点
+            # 跳过注释行
+            if stripped_line.startswith('/'):
+                continue
 
-    for line in lines:
-        stripped_line = line.strip()
+            # 如果遇到节点开始
+            if '{' in stripped_line:
+                node_name = stripped_line.split('{')[0].strip()  # 获取节点名
+                new_node = Node(name=node_name, path=global_path + node_name + '/', parent=parent_node)  # 创建新节点
+                parent_node.add_child(new_node)  # 将新节点添加为父节点的子节点
+                global_path = new_node.path + '/'  # 更新global_path
+                parent_node = new_node  # 更新当前父节点为新节点
 
-        # 跳过注释行
-        if stripped_line.startswith('/'):
-            continue
+            # 如果遇到节点结束
+            elif '}' in stripped_line:
+                # 结束当前节点，恢复到父节点
+                parent_node = parent_node.parent  # 退回到父节点
+                global_path = parent_node.path if parent_node else "/"  # 更新global_path
 
-        # 如果遇到节点开始，增加深度
-        if '{' in stripped_line:
-            node_name = stripped_line.split('{')[0].strip()  # 获取节点名
-            if depth == 0:  # 如果是根节点
-                root_nodes.append(node_name)
-                children[node_name] = []  # 初始化子节点列表
-            else:
-                if depth == 1:  # 深度为 1 表示是根节点的子节点
-                    parent_node = node_stack[-1] if node_stack else None
-                    if parent_node in children:
-                        children[parent_node].append(node_name)  # 添加子节点
-            node_stack.append(node_name)  # 入栈
-            depth += 1
-        # 如果遇到节点结束，减少深度
-        elif '}' in stripped_line:
-            if depth > 0:  # 确保 depth 大于 0
-                depth -= 1
-                node_stack.pop()  # 出栈
-
-    return root_nodes, children  # 返回根节点和子节点字典
+    return root
 
 @app.route('/')
 def index():
@@ -63,12 +69,12 @@ def upload_file():
 def hierarchy():
     dts_file = 'D:/myproj/deviceTreeTool/uploads/test.dts'  # 使用实际的文件路径
     if os.path.exists(dts_file):
-        root_nodes, children = parse_dts_file(dts_file)
-        device_tree = {node: children[node] for node in root_nodes}
+        root = parse_dts_file(dts_file)
     else:
-        device_tree = {}
+        root = None
 
-    return render_template('hierarchy.html', device_tree=device_tree)
+    return render_template('hierarchy.html', root=root)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
