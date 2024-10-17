@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>设备树层次结构</h2>
+<ul>
+    {% for node in device_tree %}
+        <li>
+            <span class="node" onclick="toggleChildren(this)">{{ node }}</span>
+            <ul style="display: none;">
+                {% for child in device_tree[node] %}
+                    <li>
+                        <span class="node" onclick="toggleChildren(this)">{{ child }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </li>
+    {% endfor %}
+</ul>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>欢迎来到设备树查看器</h1>
+<form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+    <label for="file">选择设备树文件:</label>
+    <input type="file" name="file" id="file" required>
+    <button type="submit">打开设备树文件</button>
+</form>
+{% endblock %}

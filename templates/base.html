@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备树层次结构</title>
+    <style>
+        body {
+            display: flex;
+        }
+        .sidebar {
+            width: 200px;
+            background: #f4f4f4;
+            padding: 10px;
+        }
+        .node {
+            cursor: pointer;
+            padding: 5px; /* 保留少量内边距 */
+            margin: 8px 0; /* 增大上下边距以避免重叠 */
+            text-shadow: 1px 1px 2px #aaa; /* 增加阴影效果 */
+            line-height: 1.6; /* 增加行间距 */
+        }
+        .node:hover {
+            color: #007BFF; /* 鼠标悬停时改变文本颜色 */
+        }
+        .children {
+            margin-left: 20px;
+            display: none; /* 初始隐藏子节点 */
+        }
+    </style>
+    <script>
+        function toggleChildren(element) {
+            var children = element.nextElementSibling;
+            if (children.style.display === "block") {
+                children.style.display = "none"; // 收起子节点
+            } else {
+                children.style.display = "block"; // 展开子节点
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>菜单</h2>
+        <ul>
+            <li><a href="{{ url_for('index') }}">首页</a></li>
+            <li><a href="{{ url_for('hierarchy') }}">设备树层次结构</a></li>
+        </ul>
+    </div>
+    <div id="device-tree">
+        <h1>设备树层次结构</h1>
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
