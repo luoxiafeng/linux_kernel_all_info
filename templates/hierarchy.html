@@ -22,16 +22,15 @@
 {% else %}
     <p>未找到设备树文件。</p>
 {% endif %}
+{% endblock %}
 
 <script>
-    function toggleChildren(element) {
-        var children = element.nextElementSibling;
-        if (children.style.display === "none") {
-            children.style.display = "block";
-        } else {
-            children.style.display = "none";
-        }
+function toggleChildren(element) {
+    var children = element.nextElementSibling;
+    if (children.style.display === "none") {
+        children.style.display = "block";
+    } else {
+        children.style.display = "none";
     }
+}
 </script>
-    
-{% endblock %}

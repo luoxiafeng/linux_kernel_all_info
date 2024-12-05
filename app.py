@@ -33,7 +33,10 @@ def parse_dts_file(dts_file):
             # 跳过注释行
             if stripped_line.startswith('/'):
                 continue
-
+            if global_path == '/':
+                root.content.append(stripped_line)
+            else:
+                current_node.content.append(stripped_line)
             # 如果遇到节点开始
             if '{' in stripped_line:
                 node_name = stripped_line.split('{')[0].strip()  # 获取节点名
@@ -93,6 +96,16 @@ def node_paths():
         root = None
 
     return render_template('node_paths.html', root=root)
+
+@app.route('/content')
+def content():
+    dts_file = 'D:/myproj/deviceTreeTool/uploads/test.dts'  # 使用实际的文件路径
+    if os.path.exists(dts_file):
+        root = parse_dts_file(dts_file)
+    else:
+        root = None
+
+    return render_template('content.html', root=root)
 
 if __name__ == '__main__':
     app.run(debug=True)
