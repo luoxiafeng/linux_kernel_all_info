@@ -1,141 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>节点内容层次结构</title>
-    <style>
-        body {
-            display: flex;
-        }
-        .sidebar {
-            width: 200px;
-            background: #f4f4f4;
-            padding: 10px;
-        }
-        .node {
-            cursor: pointer;
-            padding: 5px;
-            margin: 8px 0;
-            text-shadow: 1px 1px 2px #aaa;
-            line-height: 1.6;
-        }
-        .node:hover {
-            color: #007BFF;
-        }
-        .children {
-            margin-left: 20px;
-            display: none; /* 初始隐藏子节点 */
-        }
-        .content {
-            display: none; /* 初始隐藏节点内容 */
-            margin-left: 20px;
-            color: #555;
-        }
-        .control-buttons {
-            margin-bottom: 20px;
-        }
-    </style>
-    <script>
-        function toggleChildren(element) {
-            var children = element.nextElementSibling.nextElementSibling;
-            if (children.style.display === "block") {
-                children.style.display = "none"; // 收起子节点
-            } else {
-                children.style.display = "block"; // 展开子节点
-            }
-        }
+{% extends 'base.html' %}
 
-        function toggleContent(element) {
-            var content = element.nextElementSibling;
-            if (content.style.display === "block") {
-                content.style.display = "none"; // 隐藏内容
-            } else {
-                content.style.display = "block"; // 显示内容
-            }
-        }
+{% block content %}
+<h1>节点内容层次结构</h1>
 
-        function expandAll() {
-            var allChildren = document.querySelectorAll('.children');
-            allChildren.forEach(function(child) {
-                child.style.display = "block"; // 展开所有子节点
-            });
+<div class="control-buttons">
+    <button onclick="expandAll()">展开所有节点</button>
+    <button onclick="collapseAll()">收起所有节点</button>
+</div>
 
-            var allContents = document.querySelectorAll('.content');
-            allContents.forEach(function(content) {
-                content.style.display = "block"; // 展开所有内容
-            });
-        }
-
-        function collapseAll() {
-            var allChildren = document.querySelectorAll('.children');
-            allChildren.forEach(function(child) {
-                child.style.display = "none"; // 收起所有子节点
-            });
-
-            var allContents = document.querySelectorAll('.content');
-            allContents.forEach(function(content) {
-                content.style.display = "none"; // 收起所有内容
-            });
-        }
-    </script>
-</head>
-<body>
-    <div class="sidebar">
-        <h2>菜单</h2>
-        <ul>
-            <li><a href="{{ url_for('index') }}">首页</a></li>
-            <li><a href="{{ url_for('hierarchy') }}">设备树层次结构</a></li>
-            <li><a href="{{ url_for('node_paths') }}">节点路径</a></li>
-        </ul>
-    </div>
-
-    <div id="device-tree">
-        <h1>节点内容层次结构</h1>
-
-        <!-- 顶部的展开和收起按钮 -->
-        <div class="control-buttons">
-            <button onclick="expandAll()">展开所有节点</button>
-            <button onclick="collapseAll()">收起所有节点</button>
+<ul>
+    {% for node in root.children %}
+    <li>
+        <span class="node" onclick="toggleChildren(this)">{{ node.path }}</span>
+        <button onclick="toggleContent(this)">content</button>
+        <div class="content">
+            <p>{{ node.content }}</p>
         </div>
-
-        {% block content %}
-        <ul>
-            {% for node in root.children %}
+        <ul class="children">
+            {% for child in node.children %}
             <li>
-                <span class="node" onclick="toggleChildren(this)">{{ node.path }}</span>
+                <span class="node" onclick="toggleChildren(this)">{{ child.path }}</span>
                 <button onclick="toggleContent(this)">content</button>
                 <div class="content">
-                    <p>{{ node.content }}</p> <!-- 显示节点的内容 -->
+                    <p>{{ child.content }}</p>
                 </div>
                 <ul class="children">
-                    {% for child in node.children %}
+                    {% for grandchild in child.children %}
                     <li>
-                        <span class="node" onclick="toggleChildren(this)">{{ child.path }}</span>
+                        <span class="node" onclick="toggleChildren(this)">{{ grandchild.path }}</span>
                         <button onclick="toggleContent(this)">content</button>
                         <div class="content">
-                            <p>{{ child.content }}</p> <!-- 显示子节点的内容 -->
+                            <p>{{ grandchild.content }}</p>
                         </div>
                         <ul class="children">
-                            {% for grandchild in child.children %}
-                            <li>
-                                <span class="node" onclick="toggleChildren(this)">{{ grandchild.path }}</span>
-                                <button onclick="toggleContent(this)">content</button>
-                                <div class="content">
-                                    <p>{{ grandchild.content }}</p> <!-- 显示孙节点的内容 -->
-                                </div>
-                                <ul class="children">
-                                    {% for greatgrandchild in grandchild.children %}
-                                    <li>
-                                        <span class="node">{{ greatgrandchild.path }}</span>
-                                        <button onclick="toggleContent(this)">content</button>
-                                        <div class="content">
-                                            <p>{{ greatgrandchild.content }}</p> <!-- 显示曾孙节点的内容 -->
-                                        </div>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </li>
+                            {% for greatgrandchild in grandchild.children %}
+                            <li>{{ greatgrandchild.path }}</li>
                             {% endfor %}
                         </ul>
                     </li>
@@ -144,7 +43,53 @@
             </li>
             {% endfor %}
         </ul>
-        {% endblock %}
-    </div>
-</body>
-</html>
+    </li>
+    {% endfor %}
+</ul>
+
+<script>
+    function toggleChildren(element) {
+        var children = element.nextElementSibling.nextElementSibling;
+        if (children.style.display === "block") {
+            children.style.display = "none"; // 收起子节点
+        } else {
+            children.style.display = "block"; // 展开子节点
+        }
+    }
+
+    function toggleContent(element) {
+        var content = element.nextElementSibling;
+        if (content.style.display === "block") {
+            content.style.display = "none"; // 隐藏内容
+        } else {
+            content.style.display = "block"; // 显示内容
+        }
+    }
+
+    function expandAll() {
+        var allChildren = document.querySelectorAll('.children');
+        allChildren.forEach(function(child) {
+            child.style.display = "block"; // 展开所有子节点
+        });
+
+        var allContents = document.querySelectorAll('.content');
+        allContents.forEach(function(content) {
+            content.style.display = "block"; // 展开所有内容
+        });
+    }
+
+    function collapseAll() {
+        var allChildren = document.querySelectorAll('.children');
+        allChildren.forEach(function(child) {
+            child.style.display = "none"; // 收起所有子节点
+        });
+
+        var allContents = document.querySelectorAll('.content');
+        allContents.forEach(function(content) {
+            content.style.display = "none"; // 收起所有内容
+        });
+    }
+</script>
+{% endblock %}
+
+

@@ -5,32 +5,35 @@
 {% if root %}
     <ul>
         {% macro render_tree(node) %}
-            <li>
-                <span class="node" onclick="toggleChildren(this)">{{ node.name }}</span>
-                {% if node.children %}
-                    <ul style="display: none;">
-                        {% for child in node.children %}
-                            {{ render_tree(child) }}  <!-- 递归渲染子节点 -->
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-            </li>
+        <li>
+            <span class="node" onclick="toggleChildren(this)">{{ node.name }}</span>
+            {% if node.children %}
+            <ul class="children" style="display: none;">
+                {% for child in node.children %}
+                    {{ render_tree(child) }}
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </li>
         {% endmacro %}
-        
-        {{ render_tree(root) }}  <!-- 渲染根节点 -->
+
+        {{ render_tree(root) }}
     </ul>
 {% else %}
     <p>未找到设备树文件。</p>
 {% endif %}
+<script>
+    function toggleChildren(element) {
+        var children = element.nextElementSibling;
+        if (children && children.style.display !== undefined) {
+            if (children.style.display === "none") {
+                children.style.display = "block";
+            } else {
+                children.style.display = "none";
+            }
+        }
+    }
+</script>
 {% endblock %}
 
-<script>
-function toggleChildren(element) {
-    var children = element.nextElementSibling;
-    if (children.style.display === "none") {
-        children.style.display = "block";
-    } else {
-        children.style.display = "none";
-    }
-}
-</script>
+

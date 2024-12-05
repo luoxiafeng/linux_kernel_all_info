@@ -3,7 +3,6 @@
 {% block content %}
 <h1>节点路径层次结构</h1>
 
-<!-- 顶部的展开和收起按钮 -->
 <div class="control-buttons">
     <button onclick="expandAll()">展开所有节点</button>
     <button onclick="collapseAll()">收起所有节点</button>
@@ -19,15 +18,7 @@
                 <span class="node" onclick="toggleChildren(this)">{{ child.path }}</span>
                 <ul class="children">
                     {% for grandchild in child.children %}
-                    <li>
-                        <span class="node" onclick="toggleChildren(this)">{{ grandchild.path }}</span>
-                        <!-- 继续递归展示孙节点或其他后代节点 -->
-                        <ul class="children">
-                            {% for greatgrandchild in grandchild.children %}
-                            <li>{{ greatgrandchild.path }}</li>
-                            {% endfor %}
-                        </ul>
-                    </li>
+                    <li>{{ grandchild.path }}</li>
                     {% endfor %}
                 </ul>
             </li>
@@ -36,16 +27,15 @@
     </li>
     {% endfor %}
 </ul>
-
-{% endblock %}
-
 <script>
     function toggleChildren(element) {
         var children = element.nextElementSibling;
-        if (children.style.display === "block") {
-            children.style.display = "none"; // 收起子节点
-        } else {
-            children.style.display = "block"; // 展开子节点
+        if (children && children.style.display !== undefined) {
+            if (children.style.display === "none") {
+                children.style.display = "block";
+            } else {
+                children.style.display = "none";
+            }
         }
     }
 
@@ -63,3 +53,6 @@
         });
     }
 </script>
+{% endblock %}
+
+
