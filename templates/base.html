@@ -75,7 +75,7 @@
 
         .children {
             margin-left: 20px; /* 子节点左侧缩进 */
-            display: none;
+            display: none; /* 默认折叠 */
         }
 
         .node {
@@ -95,6 +95,11 @@
             margin-left: 20px;
             color: #555;
         }
+
+        /* 新增的层次关系样式 */
+        .sidebar ul li > ul {
+            margin-left: 20px; /* 子菜单项相对父菜单项缩进 */
+        }
     </style>
 </head>
 <body>
@@ -102,13 +107,96 @@
         <h2>菜单</h2>
         <ul>
             <li><a href="{{ url_for('index') }}">首页</a></li>
-            <li><a href="{{ url_for('hierarchy') }}">设备树层次结构</a></li>
-            <li><a href="{{ url_for('node_paths') }}">节点路径</a></li>
-            <li><a href="{{ url_for('content') }}">节点内容</a></li>
+            <li>
+                <a href="javascript:void(0);" onclick="toggleDeviceTree()">设备树</a>
+                <ul id="device-tree-menu" style="display: none;">
+                    <li><a href="{{ url_for('hierarchy') }}" onclick="keepSubmenuOpen(event)">设备树层次结构</a></li>
+                    <li><a href="{{ url_for('node_paths') }}" onclick="keepSubmenuOpen(event)">节点路径</a></li>
+                    <li><a href="{{ url_for('content') }}" onclick="keepSubmenuOpen(event)">节点内容</a></li>
+                </ul>
+            </li>
         </ul>
     </div>
+
     <div id="device-tree">
         {% block content %}{% endblock %}
     </div>
+
+    <script>
+        var isDeviceTreeOpen = false; // 用来跟踪“设备树”菜单是否展开
+
+        // 在页面加载时根据 sessionStorage 判断是否展开菜单
+        window.onload = function() {
+            var savedState = sessionStorage.getItem('deviceTreeState');
+            if (savedState === 'open') {
+                document.getElementById("device-tree-menu").style.display = 'block';
+                isDeviceTreeOpen = true;
+            }
+        };
+
+        // 控制"设备树"菜单展开与收起
+        function toggleDeviceTree() {
+            var menu = document.getElementById("device-tree-menu");
+            if (isDeviceTreeOpen) {
+                menu.style.display = "none";
+                sessionStorage.setItem('deviceTreeState', 'closed'); // 保存菜单状态为关闭
+            } else {
+                menu.style.display = "block";
+                sessionStorage.setItem('deviceTreeState', 'open'); // 保存菜单状态为展开
+            }
+            isDeviceTreeOpen = !isDeviceTreeOpen; // 切换状态
+        }
+
+        // 控制子节点展开与收起
+        function toggleChildren(element) {
+            var children = element.nextElementSibling;
+            if (children && children.style.display !== undefined) {
+                if (children.style.display === "none") {
+                    children.style.display = "block";
+                } else {
+                    children.style.display = "none";
+                }
+            }
+        }
+
+        // 控制内容展示与收起
+        function toggleContent(element) {
+            var content = element.nextElementSibling;
+            if (content.style.display === "block") {
+                content.style.display = "none"; // 隐藏内容
+            } else {
+                content.style.display = "block"; // 显示内容
+            }
+        }
+
+        function expandAll() {
+            var allChildren = document.querySelectorAll('.children');
+            allChildren.forEach(function(child) {
+                child.style.display = "block"; // 展开所有子节点
+            });
+
+            var allContents = document.querySelectorAll('.content');
+            allContents.forEach(function(content) {
+                content.style.display = "block"; // 展开所有内容
+            });
+        }
+
+        function collapseAll() {
+            var allChildren = document.querySelectorAll('.children');
+            allChildren.forEach(function(child) {
+                child.style.display = "none"; // 收起所有子节点
+            });
+
+            var allContents = document.querySelectorAll('.content');
+            allContents.forEach(function(content) {
+                content.style.display = "none"; // 收起所有内容
+            });
+        }
+
+        // 阻止点击子菜单项后关闭菜单
+        function keepSubmenuOpen(event) {
+            event.stopPropagation();
+        }
+    </script>
 </body>
 </html>
