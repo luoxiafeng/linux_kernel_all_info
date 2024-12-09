@@ -9,84 +9,77 @@
 </div>
 
 <ul id="tree-root">
-    {% for node in root.children %}
+    <!-- 显示 root 节点 -->
     <li>
-        <span class="node" onclick="toggleChildrenAndContent(this)">{{ node.path }}</span>
+        <span class="node" onclick="toggleChildrenAndContent(this)">/root</span>
         <div class="content">
-            <pre>
-<strong>节点属性:</strong>
+            <pre><strong>节点属性:</strong>
+addr_cells: {{ root.attr.addr_cells }}
+size_cells: {{ root.attr.size_cells }}
+refnodeattr: {{ root.attr.refnodeattr }}
+phandle: {{ root.attr.phandle }}
+compatible: {{ root.attr.compatible }}
+<strong>regaddr:</strong>
+{% for addr in root.attr.regaddr %}
+    0x{{ "%x"|format(addr) }} ({{ (addr / (1024*1024*1024))|round(2) }}G, {{ ((addr % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+<strong>regsize:</strong>
+{% for size in root.attr.regsize %}
+    {{ size }} ({{ (size / (1024*1024*1024))|round(2) }}G, {{ ((size % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+            </pre>
+            <pre><strong>节点内容:</strong>
+{{ root.content | join('\n') }}
+            </pre>
+        </div>
+        <ul class="children">
+            {% for node in root.children %}
+            <li>
+                <span class="node" onclick="toggleChildrenAndContent(this)">{{ node.path }}</span>
+                <div class="content">
+                    <pre><strong>节点属性:</strong>
 addr_cells: {{ node.attr.addr_cells }}
 size_cells: {{ node.attr.size_cells }}
 refnodeattr: {{ node.attr.refnodeattr }}
 phandle: {{ node.attr.phandle }}
 compatible: {{ node.attr.compatible }}
-regaddr: {{ node.attr.regaddr | join(', ') }}
-regsize: {{ node.attr.regsize | join(', ') }}
-            </pre>
-            <pre><strong>节点内容:</strong>
+<strong>regaddr:</strong>
+{% for addr in node.attr.regaddr %}
+    0x{{ "%x"|format(addr) }} ({{ (addr / (1024*1024*1024))|round(2) }}G, {{ ((addr % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+<strong>regsize:</strong>
+{% for size in node.attr.regsize %}
+    {{ size }} ({{ (size / (1024*1024*1024))|round(2) }}G, {{ ((size % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+                    </pre>
+                    <pre><strong>节点内容:</strong>
 {{ node.content | join('\n') }}
-            </pre>
-        </div>
-        <ul class="children">
-            {% for child in node.children %}
-            <li>
-                <span class="node" onclick="toggleChildrenAndContent(this)">{{ child.path }}</span>
-                <div class="content">
-                    <pre>
-<strong>节点属性:</strong>
+                    </pre>
+                </div>
+                <ul class="children">
+                    {% for child in node.children %}
+                    <li>
+                        <span class="node" onclick="toggleChildrenAndContent(this)">{{ child.path }}</span>
+                        <div class="content">
+                            <pre><strong>节点属性:</strong>
 addr_cells: {{ child.attr.addr_cells }}
 size_cells: {{ child.attr.size_cells }}
 refnodeattr: {{ child.attr.refnodeattr }}
 phandle: {{ child.attr.phandle }}
 compatible: {{ child.attr.compatible }}
-regaddr: {{ child.attr.regaddr | join(', ') }}
-regsize: {{ child.attr.regsize | join(', ') }}
-                    </pre>
-                    <pre><strong>节点内容:</strong>
-{{ child.content | join('\n') }}
-                    </pre>
-                </div>
-                <ul class="children">
-                    {% for grandchild in child.children %}
-                    <li>
-                        <span class="node" onclick="toggleChildrenAndContent(this)">{{ grandchild.path }}</span>
-                        <div class="content">
-                            <pre>
-<strong>节点属性:</strong>
-addr_cells: {{ grandchild.attr.addr_cells }}
-size_cells: {{ grandchild.attr.size_cells }}
-refnodeattr: {{ grandchild.attr.refnodeattr }}
-phandle: {{ grandchild.attr.phandle }}
-compatible: {{ grandchild.attr.compatible }}
-regaddr: {{ grandchild.attr.regaddr | join(', ') }}
-regsize: {{ grandchild.attr.regsize | join(', ') }}
+<strong>regaddr:</strong>
+{% for addr in child.attr.regaddr %}
+    0x{{ "%x"|format(addr) }} ({{ (addr / (1024*1024*1024))|round(2) }}G, {{ ((addr % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+<strong>regsize:</strong>
+{% for size in child.attr.regsize %}
+    {{ size }} ({{ (size / (1024*1024*1024))|round(2) }}G, {{ ((size % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
                             </pre>
                             <pre><strong>节点内容:</strong>
-{{ grandchild.content | join('\n') }}
+{{ child.content | join('\n') }}
                             </pre>
                         </div>
-                        <ul class="children">
-                            {% for greatgrandchild in grandchild.children %}
-                            <li>
-                                <span class="node" onclick="toggleChildrenAndContent(this)">{{ greatgrandchild.path }}</span>
-                                <div class="content">
-                                    <pre>
-<strong>节点属性:</strong>
-addr_cells: {{ greatgrandchild.attr.addr_cells }}
-size_cells: {{ greatgrandchild.attr.size_cells }}
-refnodeattr: {{ greatgrandchild.attr.refnodeattr }}
-phandle: {{ greatgrandchild.attr.phandle }}
-compatible: {{ greatgrandchild.attr.compatible }}
-regaddr: {{ greatgrandchild.attr.regaddr | join(', ') }}
-regsize: {{ greatgrandchild.attr.regsize | join(', ') }}
-                                    </pre>
-                                    <pre><strong>节点内容:</strong>
-{{ greatgrandchild.content | join('\n') }}
-                                    </pre>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
                     </li>
                     {% endfor %}
                 </ul>
@@ -94,7 +87,6 @@ regsize: {{ greatgrandchild.attr.regsize | join(', ') }}
             {% endfor %}
         </ul>
     </li>
-    {% endfor %}
 </ul>
 
 <script>
@@ -116,6 +108,42 @@ regsize: {{ greatgrandchild.attr.regsize | join(', ') }}
                 children.style.display = "block"; // 展开子节点
             }
         }
+    }
+
+    // 搜索功能
+    function searchContent() {
+        var searchTerm = document.getElementById("search-input").value.trim();
+        if (!searchTerm) {
+            alert("请输入搜索内容！");
+            return;
+        }
+
+        clearHighlights(); // 清除高亮
+
+        // 遍历所有内容区域
+        var contentAreas = document.querySelectorAll(".content pre");
+        contentAreas.forEach(function(pre) {
+            var content = pre.textContent;
+            if (content.includes(searchTerm)) {
+                var parentNode = pre.parentElement.previousElementSibling;
+                toggleChildrenAndContent(parentNode); // 展开节点
+
+                var highlighted = content.split("\n").map(function(line) {
+                    if (line.includes(searchTerm)) {
+                        return '<span class="highlight">' + line + '</span>';
+                    }
+                    return line;
+                }).join("\n");
+                pre.innerHTML = highlighted;
+            }
+        });
+    }
+
+    function clearHighlights() {
+        var contentAreas = document.querySelectorAll(".content pre");
+        contentAreas.forEach(function(pre) {
+            pre.innerHTML = pre.textContent;
+        });
     }
 </script>
 
