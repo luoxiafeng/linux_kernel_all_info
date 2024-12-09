@@ -3,38 +3,40 @@
 {% block content %}
 <h1>节点内容层次结构</h1>
 
-<div class="control-buttons">
-    <button onclick="expandAll()">展开所有节点</button>
-    <button onclick="collapseAll()">收起所有节点</button>
+<div class="search-container">
+    <input type="text" id="search-input" placeholder="输入内容搜索..." />
+    <button onclick="searchContent()">搜索</button>
 </div>
 
-<ul>
+<ul id="tree-root">
     {% for node in root.children %}
     <li>
-        <span class="node" onclick="toggleChildren(this)">{{ node.path }}</span>
-        <button onclick="toggleContent(this)">content</button>
+        <span class="node" onclick="toggleChildrenAndContent(this)">{{ node.path }}</span>
         <div class="content">
-            <p>{{ node.content }}</p>
+            <pre>{{ node.content | join('\n') }}</pre> <!-- 格式化显示节点内容 -->
         </div>
         <ul class="children">
             {% for child in node.children %}
             <li>
-                <span class="node" onclick="toggleChildren(this)">{{ child.path }}</span>
-                <button onclick="toggleContent(this)">content</button>
+                <span class="node" onclick="toggleChildrenAndContent(this)">{{ child.path }}</span>
                 <div class="content">
-                    <p>{{ child.content }}</p>
+                    <pre>{{ child.content | join('\n') }}</pre>
                 </div>
                 <ul class="children">
                     {% for grandchild in child.children %}
                     <li>
-                        <span class="node" onclick="toggleChildren(this)">{{ grandchild.path }}</span>
-                        <button onclick="toggleContent(this)">content</button>
+                        <span class="node" onclick="toggleChildrenAndContent(this)">{{ grandchild.path }}</span>
                         <div class="content">
-                            <p>{{ grandchild.content }}</p>
+                            <pre>{{ grandchild.content | join('\n') }}</pre>
                         </div>
                         <ul class="children">
                             {% for greatgrandchild in grandchild.children %}
-                            <li>{{ greatgrandchild.path }}</li>
+                            <li>
+                                <span class="node" onclick="toggleChildrenAndContent(this)">{{ greatgrandchild.path }}</span>
+                                <div class="content">
+                                    <pre>{{ greatgrandchild.content | join('\n') }}</pre>
+                                </div>
+                            </li>
                             {% endfor %}
                         </ul>
                     </li>
@@ -48,48 +50,95 @@
 </ul>
 
 <script>
-    function toggleChildren(element) {
+    // 展开/收起子节点和内容
+    function toggleChildrenAndContent(element) {
         var children = element.nextElementSibling.nextElementSibling;
-        if (children.style.display === "block") {
-            children.style.display = "none"; // 收起子节点
-        } else {
-            children.style.display = "block"; // 展开子节点
-        }
-    }
-
-    function toggleContent(element) {
         var content = element.nextElementSibling;
+
         if (content.style.display === "block") {
             content.style.display = "none"; // 隐藏内容
         } else {
             content.style.display = "block"; // 显示内容
         }
+
+        if (children) {
+            if (children.style.display === "block") {
+                children.style.display = "none"; // 收起子节点
+            } else {
+                children.style.display = "block"; // 展开子节点
+            }
+        }
     }
 
-    function expandAll() {
-        var allChildren = document.querySelectorAll('.children');
-        allChildren.forEach(function(child) {
-            child.style.display = "block"; // 展开所有子节点
-        });
+    // 搜索功能
+    function searchContent() {
+        var searchTerm = document.getElementById("search-input").value.trim();
+        if (!searchTerm) {
+            alert("请输入搜索内容！");
+            return;
+        }
 
-        var allContents = document.querySelectorAll('.content');
-        allContents.forEach(function(content) {
-            content.style.display = "block"; // 展开所有内容
+        // 清除之前的高亮
+        clearHighlights();
+
+        // 遍历所有内容区域
+        var contentAreas = document.querySelectorAll(".content pre");
+        contentAreas.forEach(function(pre) {
+            var content = pre.textContent;
+            if (content.includes(searchTerm)) {
+                // 展开对应的节点
+                var parentNode = pre.parentElement.previousElementSibling;
+                toggleChildrenAndContent(parentNode);
+
+                // 高亮显示匹配行
+                var highlighted = content.split("\n").map(function(line) {
+                    if (line.includes(searchTerm)) {
+                        return '<span class="highlight">' + line + '</span>';
+                    }
+                    return line;
+                }).join("\n");
+                pre.innerHTML = highlighted; // 替换内容
+            }
         });
     }
 
-    function collapseAll() {
-        var allChildren = document.querySelectorAll('.children');
-        allChildren.forEach(function(child) {
-            child.style.display = "none"; // 收起所有子节点
-        });
-
-        var allContents = document.querySelectorAll('.content');
-        allContents.forEach(function(content) {
-            content.style.display = "none"; // 收起所有内容
+    // 清除所有高亮
+    function clearHighlights() {
+        var contentAreas = document.querySelectorAll(".content pre");
+        contentAreas.forEach(function(pre) {
+            pre.innerHTML = pre.textContent; // 恢复原始内容
         });
     }
 </script>
+
+<style>
+    .search-container {
+        margin-bottom: 20px;
+    }
+
+    .search-container input {
+        padding: 5px;
+        font-size: 16px;
+        width: 200px;
+    }
+
+    .search-container button {
+        padding: 5px 10px;
+        font-size: 16px;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    .search-container button:hover {
+        background-color: #0056b3;
+    }
+
+    .highlight {
+        background-color: yellow;
+        font-weight: bold;
+    }
+</style>
 {% endblock %}
-
-
