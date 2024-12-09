@@ -25,18 +25,32 @@ def parse_dts_file(dts_file):
     root = Node(name="root", path="/")  # 创建根节点
     parent_node = root  # 初始时，父节点为根节点
     current_node = None
+    dts_version = None
 
     with open(dts_file, 'r') as file:
         for line in file:
             stripped_line = line.strip()
-
-            # 跳过注释行
-            if stripped_line.startswith('/'):
+            # 跳过"\n"
+            if stripped_line == '\n' or stripped_line == '':
                 continue
-            if global_path == '/':
-                root.content.append(stripped_line)
-            else:
-                current_node.content.append(stripped_line)
+            # 跳过版本信息
+            if stripped_line.startswith('/dts-v1/'):
+                dts_version = stripped_line
+                continue
+            # 跳过注释行
+            if stripped_line.startswith('//'):
+                continue
+            # 如果是/*开头的，跳过注释块
+            if stripped_line.startswith('/*'):
+                while '*/' not in stripped_line:
+                    stripped_line = next(file).strip()
+                continue
+            # 找到根节点
+            if stripped_line.startswith('/ {') or (stripped_line.__contains__('/') and stripped_line.__contains__('{')):
+                global_path = '/'
+                root.name = 'root'
+                continue
+          
             # 如果遇到节点开始
             if '{' in stripped_line:
                 node_name = stripped_line.split('{')[0].strip()  # 获取节点名
@@ -47,17 +61,21 @@ def parse_dts_file(dts_file):
                 parent_node = new_node  # 更新当前父节点为新节点
 
             # 记录节点的内容
-            elif '{' not in stripped_line and '}' not in stripped_line:
+            elif '{' not in stripped_line and '}' not in stripped_line and global_path != '/':
                 if current_node:
                     current_node.content.append(stripped_line)  # 将内容存储到当前节点
 
             # 如果遇到节点结束
             elif '}' in stripped_line:
                 # 结束当前节点，恢复到父节点
-                parent_node = parent_node.parent  # 退回到父节点
+                parent_node = current_node.parent  # 退回到父节点
                 global_path = parent_node.path if parent_node else "/"  # 更新global_path
                 current_node = parent_node  # 更新当前节点
-
+                
+            # 如果是根节点，将根节点和第一个子节点之间的内容保存到根节点内容中
+            if global_path == '/':
+                if not (stripped_line.__contains__('{') or stripped_line.__contains__('}')):
+                    root.content.append(stripped_line)
     return root
 
 @app.route('/')

@@ -14,7 +14,7 @@
         }
 
         .sidebar {
-            width: 20%; /* 设置菜单栏宽度为20% */
+            width: 10%; /* 左侧菜单栏宽度调整为减少30%，即从66.67%变为10% */
             background: #2c3e50;
             color: white;
             padding: 20px 15px;
@@ -58,11 +58,11 @@
         }
 
         #device-tree {
-            margin-left: 20%; /* 右侧内容区域留出20%的宽度 */
+            margin-left: 10%; /* 右侧内容区域宽度调整为剩余的80% */
             padding: 20px;
             flex-grow: 1;
             overflow-y: auto;
-            width: 80%;
+            width: 80%; /* 设置为80% */
             box-sizing: border-box;
         }
 
@@ -117,7 +117,6 @@
             </li>
         </ul>
     </div>
-
     <div id="device-tree">
         {% block content %}{% endblock %}
     </div>
