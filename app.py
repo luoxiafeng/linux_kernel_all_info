@@ -187,6 +187,7 @@ def parse_dts_file(dts_file):
                 # 结束当前节点，恢复到父节点
                 parent_node = current_node.parent  # 退回到父节点
                 global_path = parent_node.path if parent_node else "/"  # 更新global_path
+                find_inherited_cells(current_node) # 节点处理完了，如果节点没有属性addr_cells和size_cells，就向上查找
                 current_node = parent_node  # 更新当前节点
                 
             # 如果是根节点，将根节点和第一个子节点之间的内容保存到根节点内容中
@@ -201,7 +202,7 @@ def parse_dts_file(dts_file):
                     if stripped_line.__contains__('#size-cells'):
                         raw_value = stripped_line.split('=')[1].strip().strip('<>;')
                         root_attr.size_cells = int(raw_value, 16) if raw_value.startswith("0x") else int(raw_value)
- 
+    
     return root
 
 

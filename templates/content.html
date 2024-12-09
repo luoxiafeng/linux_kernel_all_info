@@ -13,28 +13,76 @@
     <li>
         <span class="node" onclick="toggleChildrenAndContent(this)">{{ node.path }}</span>
         <div class="content">
-            <pre>{{ node.content | join('\n') }}</pre> <!-- 格式化显示节点内容 -->
+            <pre>
+<strong>节点属性:</strong>
+addr_cells: {{ node.attr.addr_cells }}
+size_cells: {{ node.attr.size_cells }}
+refnodeattr: {{ node.attr.refnodeattr }}
+phandle: {{ node.attr.phandle }}
+compatible: {{ node.attr.compatible }}
+regaddr: {{ node.attr.regaddr | join(', ') }}
+regsize: {{ node.attr.regsize | join(', ') }}
+            </pre>
+            <pre><strong>节点内容:</strong>
+{{ node.content | join('\n') }}
+            </pre>
         </div>
         <ul class="children">
             {% for child in node.children %}
             <li>
                 <span class="node" onclick="toggleChildrenAndContent(this)">{{ child.path }}</span>
                 <div class="content">
-                    <pre>{{ child.content | join('\n') }}</pre>
+                    <pre>
+<strong>节点属性:</strong>
+addr_cells: {{ child.attr.addr_cells }}
+size_cells: {{ child.attr.size_cells }}
+refnodeattr: {{ child.attr.refnodeattr }}
+phandle: {{ child.attr.phandle }}
+compatible: {{ child.attr.compatible }}
+regaddr: {{ child.attr.regaddr | join(', ') }}
+regsize: {{ child.attr.regsize | join(', ') }}
+                    </pre>
+                    <pre><strong>节点内容:</strong>
+{{ child.content | join('\n') }}
+                    </pre>
                 </div>
                 <ul class="children">
                     {% for grandchild in child.children %}
                     <li>
                         <span class="node" onclick="toggleChildrenAndContent(this)">{{ grandchild.path }}</span>
                         <div class="content">
-                            <pre>{{ grandchild.content | join('\n') }}</pre>
+                            <pre>
+<strong>节点属性:</strong>
+addr_cells: {{ grandchild.attr.addr_cells }}
+size_cells: {{ grandchild.attr.size_cells }}
+refnodeattr: {{ grandchild.attr.refnodeattr }}
+phandle: {{ grandchild.attr.phandle }}
+compatible: {{ grandchild.attr.compatible }}
+regaddr: {{ grandchild.attr.regaddr | join(', ') }}
+regsize: {{ grandchild.attr.regsize | join(', ') }}
+                            </pre>
+                            <pre><strong>节点内容:</strong>
+{{ grandchild.content | join('\n') }}
+                            </pre>
                         </div>
                         <ul class="children">
                             {% for greatgrandchild in grandchild.children %}
                             <li>
                                 <span class="node" onclick="toggleChildrenAndContent(this)">{{ greatgrandchild.path }}</span>
                                 <div class="content">
-                                    <pre>{{ greatgrandchild.content | join('\n') }}</pre>
+                                    <pre>
+<strong>节点属性:</strong>
+addr_cells: {{ greatgrandchild.attr.addr_cells }}
+size_cells: {{ greatgrandchild.attr.size_cells }}
+refnodeattr: {{ greatgrandchild.attr.refnodeattr }}
+phandle: {{ greatgrandchild.attr.phandle }}
+compatible: {{ greatgrandchild.attr.compatible }}
+regaddr: {{ greatgrandchild.attr.regaddr | join(', ') }}
+regsize: {{ greatgrandchild.attr.regsize | join(', ') }}
+                                    </pre>
+                                    <pre><strong>节点内容:</strong>
+{{ greatgrandchild.content | join('\n') }}
+                                    </pre>
                                 </div>
                             </li>
                             {% endfor %}
@@ -69,46 +117,6 @@
             }
         }
     }
-
-    // 搜索功能
-    function searchContent() {
-        var searchTerm = document.getElementById("search-input").value.trim();
-        if (!searchTerm) {
-            alert("请输入搜索内容！");
-            return;
-        }
-
-        // 清除之前的高亮
-        clearHighlights();
-
-        // 遍历所有内容区域
-        var contentAreas = document.querySelectorAll(".content pre");
-        contentAreas.forEach(function(pre) {
-            var content = pre.textContent;
-            if (content.includes(searchTerm)) {
-                // 展开对应的节点
-                var parentNode = pre.parentElement.previousElementSibling;
-                toggleChildrenAndContent(parentNode);
-
-                // 高亮显示匹配行
-                var highlighted = content.split("\n").map(function(line) {
-                    if (line.includes(searchTerm)) {
-                        return '<span class="highlight">' + line + '</span>';
-                    }
-                    return line;
-                }).join("\n");
-                pre.innerHTML = highlighted; // 替换内容
-            }
-        });
-    }
-
-    // 清除所有高亮
-    function clearHighlights() {
-        var contentAreas = document.querySelectorAll(".content pre");
-        contentAreas.forEach(function(pre) {
-            pre.innerHTML = pre.textContent; // 恢复原始内容
-        });
-    }
 </script>
 
 <style>
@@ -139,6 +147,16 @@
     .highlight {
         background-color: yellow;
         font-weight: bold;
+    }
+
+    .content pre {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-family: monospace;
+        overflow-x: auto;
+        margin-bottom: 10px;
     }
 </style>
 {% endblock %}
