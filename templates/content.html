@@ -12,15 +12,18 @@
     <!-- 显示 root 节点 -->
     <li>
         <span class="node" onclick="toggleChildrenAndContent(this)">/root</span>
-        <div class="content">
+        <div class="content" style="background-color: {{ 'skyblue' if root.attr.refnodeattr else 'inherit' }};">
             <pre><strong>节点属性:</strong>
+{% if root.attr.refnodeattr %}
+<span style="color: red;">属性引用自向上的某父节点</span>
+{% endif %}
 addr_cells: {{ root.attr.addr_cells }}
 size_cells: {{ root.attr.size_cells }}
 refnodeattr: {{ root.attr.refnodeattr }}
 phandle: {{ root.attr.phandle }}
 compatible: {{ root.attr.compatible }}
 <strong>regaddr:</strong>
-{% for addr in root.attr.regaddr %}
+{% for addr in root.attr.regaddr %} 
     0x{{ "%x"|format(addr) }} ({{ (addr / (1024*1024*1024))|round(2) }}G, {{ ((addr % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
 {% endfor %}
 <strong>regsize:</strong>
@@ -29,15 +32,22 @@ compatible: {{ root.attr.compatible }}
 {% endfor %}
             </pre>
             <pre><strong>节点内容:</strong>
-{{ root.content | join('\n') }}
+<span class="highlight">{{ root.name }}</span> {
+{% for line in root.content %}
+        {{ line }}
+{% endfor %}
+}
             </pre>
         </div>
         <ul class="children">
             {% for node in root.children %}
             <li>
                 <span class="node" onclick="toggleChildrenAndContent(this)">{{ node.path }}</span>
-                <div class="content">
+                <div class="content" style="background-color: {{ 'skyblue' if node.attr.refnodeattr else 'inherit' }};">
                     <pre><strong>节点属性:</strong>
+{% if node.attr.refnodeattr %}
+<span style="color: red;">属性引用自向上的某父节点</span>
+{% endif %}
 addr_cells: {{ node.attr.addr_cells }}
 size_cells: {{ node.attr.size_cells }}
 refnodeattr: {{ node.attr.refnodeattr }}
@@ -53,15 +63,22 @@ compatible: {{ node.attr.compatible }}
 {% endfor %}
                     </pre>
                     <pre><strong>节点内容:</strong>
-{{ node.content | join('\n') }}
+<span class="highlight">{{ node.name }}</span> {
+{% for line in node.content %}
+        {{ line }}
+{% endfor %}
+}
                     </pre>
                 </div>
                 <ul class="children">
                     {% for child in node.children %}
                     <li>
                         <span class="node" onclick="toggleChildrenAndContent(this)">{{ child.path }}</span>
-                        <div class="content">
+                        <div class="content" style="background-color: {{ 'skyblue' if child.attr.refnodeattr else 'inherit' }};">
                             <pre><strong>节点属性:</strong>
+{% if child.attr.refnodeattr %}
+<span style="color: red;">属性引用自向上的某父节点</span>
+{% endif %}
 addr_cells: {{ child.attr.addr_cells }}
 size_cells: {{ child.attr.size_cells }}
 refnodeattr: {{ child.attr.refnodeattr }}
@@ -77,15 +94,22 @@ compatible: {{ child.attr.compatible }}
 {% endfor %}
                             </pre>
                             <pre><strong>节点内容:</strong>
-{{ child.content | join('\n') }}
+<span class="highlight">{{ child.name }}</span> {
+{% for line in child.content %}
+        {{ line }}
+{% endfor %}
+}
                             </pre>
                         </div>
                         <ul class="children">
                             {% for grandchild in child.children %}
                             <li>
                                 <span class="node" onclick="toggleChildrenAndContent(this)">{{ grandchild.path }}</span>
-                                <div class="content">
+                                <div class="content" style="background-color: {{ 'skyblue' if grandchild.attr.refnodeattr else 'inherit' }};">
                                     <pre><strong>节点属性:</strong>
+{% if grandchild.attr.refnodeattr %}
+<span style="color: red;">属性引用自向上的某父节点</span>
+{% endif %}
 addr_cells: {{ grandchild.attr.addr_cells }}
 size_cells: {{ grandchild.attr.size_cells }}
 refnodeattr: {{ grandchild.attr.refnodeattr }}
@@ -101,15 +125,22 @@ compatible: {{ grandchild.attr.compatible }}
 {% endfor %}
                                     </pre>
                                     <pre><strong>节点内容:</strong>
-{{ grandchild.content | join('\n') }}
+<span class="highlight">{{ grandchild.name }}</span> {
+{% for line in grandchild.content %}
+        {{ line }}
+{% endfor %}
+}
                                     </pre>
                                 </div>
                                 <ul class="children">
                                     {% for greatgrandchild in grandchild.children %}
                                     <li>
                                         <span class="node" onclick="toggleChildrenAndContent(this)">{{ greatgrandchild.path }}</span>
-                                        <div class="content">
+                                        <div class="content" style="background-color: {{ 'skyblue' if greatgrandchild.attr.refnodeattr else 'inherit' }};">
                                             <pre><strong>节点属性:</strong>
+{% if greatgrandchild.attr.refnodeattr %}
+<span style="color: red;">属性引用自向上的某父节点</span>
+{% endif %}
 addr_cells: {{ greatgrandchild.attr.addr_cells }}
 size_cells: {{ greatgrandchild.attr.size_cells }}
 refnodeattr: {{ greatgrandchild.attr.refnodeattr }}
@@ -125,7 +156,11 @@ compatible: {{ greatgrandchild.attr.compatible }}
 {% endfor %}
                                             </pre>
                                             <pre><strong>节点内容:</strong>
-{{ greatgrandchild.content | join('\n') }}
+<span class="highlight">{{ greatgrandchild.name }}</span> {
+{% for line in greatgrandchild.content %}
+        {{ line }}
+{% endfor %}
+}
                                             </pre>
                                         </div>
                                     </li>
@@ -152,7 +187,7 @@ compatible: {{ greatgrandchild.attr.compatible }}
         if (content.style.display === "block") {
             content.style.display = "none"; // 隐藏内容
         } else {
-            content.style.display = "block"; // 显示内容
+            content.style.display = "block"; // 显���内容
         }
 
         if (children) {
@@ -180,30 +215,56 @@ compatible: {{ greatgrandchild.attr.compatible }}
         }
 
         clearHighlights(); // 清除高亮
+        collapseAll(); // 收起所有节点
+
+        var found = false;
+        var results = [];
 
         // 遍历所有内容区域
         var contentAreas = document.querySelectorAll(".content pre");
         contentAreas.forEach(function(pre) {
             var content = pre.textContent;
             if (content.includes(searchTerm)) {
+                found = true;
                 var parentNode = pre.parentElement.previousElementSibling;
-                toggleChildrenAndContent(parentNode); // 展开节点
-
-                var highlighted = content.split("\n").map(function(line) {
-                    if (line.includes(searchTerm)) {
-                        return '<span class="highlight">' + line + '</span>';
-                    }
-                    return line;
-                }).join("\n");
-                pre.innerHTML = highlighted;
+                results.push(parentNode.closest('li').cloneNode(true)); // 克隆匹配的节点
             }
         });
+
+        if (!found) {
+            alert("未找到匹配的内容！");
+        } else {
+            displaySearchResults(results); // 显示搜索结果
+        }
+    }
+
+    function displaySearchResults(results) {
+        var treeRoot = document.getElementById("tree-root");
+        treeRoot.innerHTML = ""; // 清除当前HTML页面的内容
+
+        results.forEach(function(result) {
+            treeRoot.appendChild(result); // 重新显示搜索结果
+        });
+
+        collapseAll(); // 默认搜索结果都是折叠状态
     }
 
     function clearHighlights() {
         var contentAreas = document.querySelectorAll(".content pre");
         contentAreas.forEach(function(pre) {
             pre.innerHTML = pre.textContent;
+        });
+    }
+
+    function collapseAll() {
+        var allChildren = document.querySelectorAll('.children');
+        allChildren.forEach(function(child) {
+            child.style.display = "none"; // 收起所有子节点
+        });
+
+        var allContents = document.querySelectorAll('.content');
+        allContents.forEach(function(content) {
+            content.style.display = "none"; // 收起所有内容
         });
     }
 </script>
@@ -248,4 +309,4 @@ compatible: {{ greatgrandchild.attr.compatible }}
         margin-bottom: 10px;
     }
 </style>
-{% endblock %}
+{% endblock %} 
