@@ -80,6 +80,60 @@ compatible: {{ child.attr.compatible }}
 {{ child.content | join('\n') }}
                             </pre>
                         </div>
+                        <ul class="children">
+                            {% for grandchild in child.children %}
+                            <li>
+                                <span class="node" onclick="toggleChildrenAndContent(this)">{{ grandchild.path }}</span>
+                                <div class="content">
+                                    <pre><strong>节点属性:</strong>
+addr_cells: {{ grandchild.attr.addr_cells }}
+size_cells: {{ grandchild.attr.size_cells }}
+refnodeattr: {{ grandchild.attr.refnodeattr }}
+phandle: {{ grandchild.attr.phandle }}
+compatible: {{ grandchild.attr.compatible }}
+<strong>regaddr:</strong>
+{% for addr in grandchild.attr.regaddr %}
+    0x{{ "%x"|format(addr) }} ({{ (addr / (1024*1024*1024))|round(2) }}G, {{ ((addr % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+<strong>regsize:</strong>
+{% for size in grandchild.attr.regsize %}
+    {{ size }} ({{ (size / (1024*1024*1024))|round(2) }}G, {{ ((size % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+                                    </pre>
+                                    <pre><strong>节点内容:</strong>
+{{ grandchild.content | join('\n') }}
+                                    </pre>
+                                </div>
+                                <ul class="children">
+                                    {% for greatgrandchild in grandchild.children %}
+                                    <li>
+                                        <span class="node" onclick="toggleChildrenAndContent(this)">{{ greatgrandchild.path }}</span>
+                                        <div class="content">
+                                            <pre><strong>节点属性:</strong>
+addr_cells: {{ greatgrandchild.attr.addr_cells }}
+size_cells: {{ greatgrandchild.attr.size_cells }}
+refnodeattr: {{ greatgrandchild.attr.refnodeattr }}
+phandle: {{ greatgrandchild.attr.phandle }}
+compatible: {{ greatgrandchild.attr.compatible }}
+<strong>regaddr:</strong>
+{% for addr in greatgrandchild.attr.regaddr %}
+    0x{{ "%x"|format(addr) }} ({{ (addr / (1024*1024*1024))|round(2) }}G, {{ ((addr % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+<strong>regsize:</strong>
+{% for size in greatgrandchild.attr.regsize %}
+    {{ size }} ({{ (size / (1024*1024*1024))|round(2) }}G, {{ ((size % (1024*1024*1024)) / (1024*1024))|round(2) }}M)
+{% endfor %}
+                                            </pre>
+                                            <pre><strong>节点内容:</strong>
+{{ greatgrandchild.content | join('\n') }}
+                                            </pre>
+                                        </div>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                            {% endfor %}
+                        </ul>
                     </li>
                     {% endfor %}
                 </ul>
@@ -92,8 +146,8 @@ compatible: {{ child.attr.compatible }}
 <script>
     // 展开/收起子节点和内容
     function toggleChildrenAndContent(element) {
-        var children = element.nextElementSibling.nextElementSibling;
         var content = element.nextElementSibling;
+        var children = element.nextElementSibling.nextElementSibling;
 
         if (content.style.display === "block") {
             content.style.display = "none"; // 隐藏内容
@@ -102,10 +156,17 @@ compatible: {{ child.attr.compatible }}
         }
 
         if (children) {
-            if (children.style.display === "block") {
-                children.style.display = "none"; // 收起子节点
-            } else {
-                children.style.display = "block"; // 展开子节点
+            toggleAllChildren(children, children.style.display === "none");
+        }
+    }
+
+    // 递归展开/收起所有子节点
+    function toggleAllChildren(element, show) {
+        if (element) {
+            element.style.display = show ? "block" : "none"; // 展开或收起当前节点
+            var childNodes = element.querySelectorAll('ul');
+            for (var i = 0; i < childNodes.length; i++) {
+                childNodes[i].style.display = show ? "block" : "none"; // 展开或收起所有子节点
             }
         }
     }
