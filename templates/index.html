@@ -1,10 +1,22 @@
+{# Version: v2.7 #}
 {% extends 'base.html' %}
 
 {% block content %}
 <h1>欢迎来到设备树查看器</h1>
 <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
-    <label for="file">选择设备树文件:</label>
+    <label for="file">上传设备树文件:</label>
     <input type="file" name="file" id="file" required>
-    <button type="submit">打开设备树文件</button>
+    <!-- 原“打开设备树文件”按钮已移除 -->
+</form>
+
+<!-- 下拉列表自动提交，无需按钮 -->
+<form action="{{ url_for('select_file') }}" method="post">
+    <label for="chosen_file">选择设备树文件:</label>
+    <select name="chosen_file" id="chosen_file" onchange="this.form.submit()">
+        {% for f in files %}
+        <option value="{{ f }}">{{ f }}</option>
+        {% endfor %}
+    </select>
+    <!-- 不再有“选择”按钮 -->
 </form>
 {% endblock %}

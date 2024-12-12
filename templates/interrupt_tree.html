@@ -1,0 +1,124 @@
+{# Version: v1.5 #}
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .clickable-node {
+        cursor: pointer;
+        color: #0066cc;
+        text-decoration: underline;
+    }
+
+    .clickable-node:hover {
+        color: #0051a3;
+    }
+
+    .node-details-box {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px 0;
+        background: #fafafa;
+    }
+
+    .node-details-box h4 {
+        margin-top: 0;
+    }
+
+    .node-details-box pre {
+        background: #f0f0f0;
+        padding: 10px;
+        overflow-x: auto;
+    }
+</style>
+
+<h2>中断树关系图（文本）</h2>
+<p><a href="{{ url_for('interrupt_tree_graph') }}">查看图形化中断关系图</a></p>
+
+{% macro render_clickable_node(node) %}
+    <span class="clickable-node" onclick="toggleNodeDetails(this)">
+        {{ node.name }}{% if node.attr and node.attr.phandle %} (phandle: {{ node.attr.phandle }}){% endif %}
+    </span>
+    <div class="node-details" style="display:none; margin-left:20px;">
+        <div class="node-details-box">
+            <h4>Attributes:</h4>
+            <pre><code>
+phandle: {{ node.attr.phandle }}
+compatible: {{ node.attr.compatible }}
+addr_cells: {{ node.attr.addr_cells }}
+size_cells: {{ node.attr.size_cells }}
+refnodeattr: {{ node.attr.refnodeattr }}
+regaddr: {{ node.attr.regaddr }}
+regsize: {{ node.attr.regsize }}
+            </code></pre>
+            <h4>Content:</h4>
+            <pre><code>
+{% for line in node.content %}
+{{ line }}
+{% endfor %}
+            </code></pre>
+        </div>
+    </div>
+{% endmacro %}
+
+<h3 class="node" onclick="toggleNodeContent(this)">中断控制器节点列表</h3>
+<ul style="display: none;">
+{% for cnode in controller_nodes %}
+    <li>{{ render_clickable_node(cnode) }}</li>
+{% endfor %}
+</ul>
+
+<h3 class="node" onclick="toggleNodeContent(this)">中断生成设备节点列表</h3>
+<ul style="display: none;">
+{% for gnode in generator_nodes %}
+    <li>{{ render_clickable_node(gnode) }}</li>
+{% endfor %}
+</ul>
+
+<h3 class="node" onclick="toggleNodeContent(this)">中断连接器节点列表</h3>
+<ul style="display: none;">
+{% for conn in connector_nodes %}
+    <li>{{ render_clickable_node(conn) }}</li>
+{% endfor %}
+</ul>
+
+<hr>
+
+<h3 class="node" onclick="toggleNodeContent(this)">中断控制器 -> 中断生成设备 关系</h3>
+<ul style="display: none;">
+{% for ctrl, gen in ctrl_gen_relations %}
+    <li>{{ render_clickable_node(ctrl) }} -> {{ render_clickable_node(gen) }}</li>
+{% endfor %}
+</ul>
+
+<h3 class="node" onclick="toggleNodeContent(this)">中断控制器 -> 中断连接器 关系</h3>
+<ul style="display: none;">
+{% for ctrl, conn in ctrl_conn_relations %}
+    <li>{{ render_clickable_node(ctrl) }} -> {{ render_clickable_node(conn) }}</li>
+{% endfor %}
+</ul>
+
+<h3 class="node" onclick="toggleNodeContent(this)">中断连接器 -> 中断生成设备 关系</h3>
+<ul style="display: none;">
+{% for conn, gen in conn_gen_relations %}
+    <li>{{ render_clickable_node(conn) }} -> {{ render_clickable_node(gen) }}</li>
+{% endfor %}
+</ul>
+
+<p>点击上面的标题可展开/收起对应列表；点击列表中的节点名可展开查看该节点的属性和内容。</p>
+
+<script>
+    function toggleNodeContent(element) {
+        var nextUl = element.nextElementSibling;
+        if (nextUl && nextUl.tagName.toLowerCase() === 'ul') {
+            nextUl.style.display = (nextUl.style.display === "none") ? "block" : "none";
+        }
+    }
+
+    function toggleNodeDetails(element) {
+        var details = element.nextElementSibling;
+        if (details && details.style.display !== undefined) {
+            details.style.display = (details.style.display === "none") ? "block" : "none";
+        }
+    }
+</script>
+{% endblock %}
