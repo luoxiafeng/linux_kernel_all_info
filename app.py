@@ -1,4 +1,4 @@
-# Version: v2.6
+# Version: v2.6 (enhanced reg parsing)
 from flask import Flask, render_template, request, redirect, url_for, session
 from markupsafe import Markup
 import os
@@ -62,24 +62,80 @@ def parse_dts_file(dts_file):
     current_node = None
     dts_version = None
 
+    def handle_comment_line(line_iter, line):
+        # 处理/* ... */注释，多行可能性
+        result = ""
+        pos = 0
+        while True:
+            start = line.find('/*', pos)
+            if start == -1:
+                # 没有/*，整行保留
+                result += line[pos:]
+                break
+            else:
+                # 有/*，保留之前的内容
+                result += line[pos:start]
+                end = line.find('*/', start+2)
+                if end == -1:
+                    # 当前行没有结束注释，丢弃后续
+                    while True:
+                        try:
+                            next_line = next(line_iter)
+                        except StopIteration:
+                            # 文件结束仍未找到*/
+                            break
+                        cpos = next_line.find('*/')
+                        if cpos == -1:
+                            # 整行都是注释
+                            continue
+                        else:
+                            # 找到*/，该行从*/后面开始
+                            after = next_line[cpos+2:].strip()
+                            line = after  # 更新line，继续处理可能后面的/*注释
+                            pos = 0
+                            break
+                else:
+                    # 同行结束注释，保留*/后的内容
+                    pos = end+2
+                    # 不break，可能有多个注释段
+        return result.strip()
+
     with open(dts_file, 'r') as file:
-        for line in file:
+        line_iter = iter(file)
+        while True:
+            try:
+                line = next(line_iter)
+            except StopIteration:
+                break
             stripped_line = line.strip()
-            if stripped_line == '\n' or stripped_line == '':
+            if stripped_line == '' or stripped_line == '\n':
                 continue
+
+            # 先处理/* ... */多行注释
+            if '/*' in stripped_line:
+                stripped_line = handle_comment_line(line_iter, stripped_line)
+                if stripped_line == '':
+                    continue  # 注释可能清空这行
+
+            # 处理 // 注释：如果//在行首，则跳过该行
+            if stripped_line.startswith('//'):
+                continue
+            # 如果//在中间，只保留//前面的部分
+            slash_pos = stripped_line.find('//')
+            if slash_pos != -1:
+                stripped_line = stripped_line[:slash_pos].strip()
+                if stripped_line == '':
+                    continue
+
             if stripped_line.startswith('/dts-v1/'):
                 dts_version = stripped_line
                 continue
-            if stripped_line.startswith('//'):
-                continue
-            if stripped_line.startswith('/*'):
-                while '*/' not in stripped_line:
-                    stripped_line = next(file).strip()
-                continue
+
             if stripped_line.startswith('/ {') or ('/' in stripped_line and '{' in stripped_line):
                 global_path = '/'
                 root.name = 'root'
                 continue
+
             if '{' in stripped_line:
                 node_name = stripped_line.split('{')[0].strip()
                 new_node = Node(name=node_name, path=global_path + node_name + '/', parent=parent_node)
@@ -94,49 +150,71 @@ def parse_dts_file(dts_file):
             elif '{' not in stripped_line and '}' not in stripped_line and global_path != '/':
                 if current_node:
                     current_node.content.append(stripped_line)
+
                 if '#address-cells' in stripped_line:
                     try:
-                        raw_value = stripped_line.split('=')[1].strip().strip('<>;')
-                        current_node.attr.addr_cells = int(raw_value, 16) if raw_value.startswith("0x") else int(raw_value)
-                    except (IndexError, ValueError):
+                        raw_value = stripped_line.split('=')[1].strip('<>; ')
+                        current_node.attr.addr_cells = int(raw_value, 0)
+                    except:
                         raise ValueError(f"Invalid format for #address-cells in line: {stripped_line}")
+
                 if '#size-cells' in stripped_line:
                     try:
-                        raw_value = stripped_line.split('=')[1].strip().strip('<>;')
-                        current_node.attr.size_cells = int(raw_value, 16) if raw_value.startswith("0x") else int(raw_value)
-                    except (IndexError, ValueError):
+                        raw_value = stripped_line.split('=')[1].strip('<>; ')
+                        current_node.attr.size_cells = int(raw_value, 0)
+                    except:
                         raise ValueError(f"Invalid format for #size-cells in line: {stripped_line}")
+
                 if 'phandle' in stripped_line:
                     try:
-                        raw_value = stripped_line.split('=')[1].strip().strip('<>;')
+                        raw_value = stripped_line.split('=')[1].strip('<>; ')
                         if raw_value.startswith("0x"):
                             current_node.attr.phandle = int(raw_value, 16)
                         else:
                             current_node.attr.phandle = int(raw_value)
-                    except (IndexError, ValueError):
+                    except:
                         raise ValueError(f"Invalid format for phandle in line: {stripped_line}")
+
                 if 'compatible' in stripped_line:
                     try:
-                        current_node.attr.compatible = stripped_line.split('=')[1].strip().strip('<>;')
-                    except IndexError:
+                        current_node.attr.compatible = stripped_line.split('=')[1].strip('<>; ')
+                    except:
                         raise ValueError(f"Invalid format for compatible in line: {stripped_line}")
+
                 if 'reg = ' in stripped_line:
-                    try:
-                        reg_values = stripped_line.split('=')[1].strip().strip('<>;').split()
-                        reg_values = [int(value, 16) if value.startswith("0x") else int(value) for value in reg_values]
-                    except (IndexError, ValueError):
-                        raise ValueError(f"Invalid format for reg in line: {stripped_line}")
+                    reg_line = stripped_line
+                    while ';' not in reg_line:
+                        next_line = next(line_iter).strip()
+                        if current_node:
+                            current_node.content.append(next_line)
+                        reg_line += ' ' + next_line
+
+                    reg_line_processed = reg_line.split('=')[1].strip().strip(';')
+                    groups = reg_line_processed.split('>')
+                    all_values = []
+                    for g in groups:
+                        g = g.replace('<','').replace(',','').strip()
+                        if g:
+                            vals = g.split()
+                            for v in vals:
+                                if v.startswith("0x"):
+                                    all_values.append(int(v,16))
+                                else:
+                                    all_values.append(int(v))
                     try:
                         addr_cells, size_cells = find_inherited_cells(current_node)
                     except ValueError as e:
                         raise ValueError(f"Cannot parse reg due to missing addr_cells and size_cells: {e}")
+
                     step = addr_cells + size_cells
-                    if len(reg_values) % step != 0:
-                        raise ValueError(f"Invalid reg length: {len(reg_values)} for addr_cells: {addr_cells}, size_cells: {size_cells}")
+                    if len(all_values) % step != 0:
+                        print(stripped_line)
+                        raise ValueError(f"Invalid reg length: {len(all_values)} for addr_cells: {addr_cells}, size_cells: {size_cells}")
+
                     regaddr_list = []
                     regsize_list = []
-                    for i in range(0, len(reg_values), step):
-                        group = reg_values[i:i + step]
+                    for i in range(0, len(all_values), step):
+                        group = all_values[i:i+step]
                         if len(group) != step:
                             raise ValueError(f"Incomplete reg group: {group}")
                         regaddr = 0
@@ -155,19 +233,21 @@ def parse_dts_file(dts_file):
                 global_path = parent_node.path if parent_node else "/"
                 find_inherited_cells(current_node)
                 current_node = parent_node
-                
+
             if global_path == '/':
-                if not (stripped_line.__contains__('{') or stripped_line.__contains__('}')):
+                if not ('{' in stripped_line or '}' in stripped_line):
                     root.content.append(stripped_line)
-                    if stripped_line.__contains__('compatible'):
-                        root.attr.compatible = stripped_line.split('=')[1].strip().strip('<>;')
-                    if stripped_line.__contains__('#address-cells'):
-                        raw_value = stripped_line.split('=')[1].strip().strip('<>;')
-                        root.attr.addr_cells = int(raw_value, 16) if raw_value.startswith("0x") else int(raw_value)
-                    if stripped_line.__contains__('#size-cells'):
-                        raw_value = stripped_line.split('=')[1].strip().strip('<>;')
-                        root.attr.size_cells = int(raw_value, 16) if raw_value.startswith("0x") else int(raw_value)
+                    if 'compatible' in stripped_line:
+                        root.attr.compatible = stripped_line.split('=')[1].strip('<>; ')
+                    if '#address-cells' in stripped_line:
+                        raw_value = stripped_line.split('=')[1].strip('<>; ')
+                        root.attr.addr_cells = int(raw_value, 0)
+                    if '#size-cells' in stripped_line:
+                        raw_value = stripped_line.split('=')[1].strip('<>; ')
+                        root.attr.size_cells = int(raw_value, 0)
+
     return root
+
 
 def get_device_tree_files():
     files = []
@@ -182,14 +262,11 @@ def validate_device_tree_file(filepath):
     else:
         return None
 
-# 新增：获取当前dts文件的统一函数
 def get_current_dts_file():
-    # 如果session中有selected_file并且文件存在，则返回
     if 'selected_file' in session:
         sf = session['selected_file']
         if os.path.exists(sf):
             return sf
-    # 如果没选中或者文件不存在，则可以返回None或直接报错
     return None
 
 @app.route('/')
@@ -254,12 +331,12 @@ def interrupt_tree():
         return "尚未选择或上传有效的 dts 文件", 400
     root = parse_dts_file(dts_file)
     if not root:
-        return render_template('interrupt_tree.html', 
-                               controller_nodes=[], 
-                               generator_nodes=[], 
-                               connector_nodes=[], 
-                               ctrl_gen_relations=[], 
-                               ctrl_conn_relations=[], 
+        return render_template('interrupt_tree.html',
+                               controller_nodes=[],
+                               generator_nodes=[],
+                               connector_nodes=[],
+                               ctrl_gen_relations=[],
+                               ctrl_conn_relations=[],
                                conn_gen_relations=[])
 
     all_nodes = []
@@ -323,12 +400,12 @@ def interrupt_tree():
                 if parent_node in connector_nodes:
                     conn_gen_relations.append((parent_node, g_node))
 
-    return render_template('interrupt_tree.html', 
-                           controller_nodes=controller_nodes, 
-                           generator_nodes=generator_nodes, 
-                           connector_nodes=connector_nodes, 
-                           ctrl_gen_relations=ctrl_gen_relations, 
-                           ctrl_conn_relations=ctrl_conn_relations, 
+    return render_template('interrupt_tree.html',
+                           controller_nodes=controller_nodes,
+                           generator_nodes=generator_nodes,
+                           connector_nodes=connector_nodes,
+                           ctrl_gen_relations=ctrl_gen_relations,
+                           ctrl_conn_relations=ctrl_conn_relations,
                            conn_gen_relations=conn_gen_relations)
 
 @app.route('/interrupt_tree_graph')

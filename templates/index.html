@@ -2,7 +2,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>欢迎来到设备树查看器</h1>
+<h1>欢迎来到设备树查看器,请用dtb转化之后的dts文件，否则会各种语法错误</h1>
 <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
     <label for="file">上传设备树文件:</label>
     <input type="file" name="file" id="file" required>

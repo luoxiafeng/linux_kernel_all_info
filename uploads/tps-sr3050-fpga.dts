@@ -1,0 +1,1344 @@
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/tps-sr3050-irq.h>
+#include <dt-bindings/tps/tps-common.h>
+#include <dt-bindings/pinctrl/pinctrl-tps.h>
+#include <dt-bindings/soc/sr3050-power-domain.h>
+#include <dt-bindings/clock/sr3050-clk.h>
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "tps fpga";
+	compatible = "thead,tps-evb";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial3 = &uart3;
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		spi8 = &ospi;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		ethernet0 = &macb0;
+		/*
+			if no aliases provided, 
+			driver will failed to get 
+			index of a serial port, 
+			lead to probe fail.
+		*/
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		timebase-frequency = <48000000>;
+		cpu0:cpu@0 {
+			device_type = "cpu";
+			reg = <0>;
+			status = "okay";
+			compatible = "riscv";
+			mmu-type = "riscv,sv39";
+			riscv,isa = "rv64imafdc_zicbom_svpbmt_sstc_sscofpmf";
+			riscv,cbom-block-size = <64>;
+			cpu0_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+
+		cpu1:cpu@1 {
+			device_type = "cpu";
+			reg = <1>;
+			status = "okay";
+			compatible = "riscv";
+			mmu-type = "riscv,sv39";
+			riscv,isa = "rv64imafdc_zicbom_svpbmt_sstc_sscofpmf";
+			riscv,cbom-block-size = <64>;
+			cpu1_intc: interrupt-controller {
+				#interrupt-cells = <1>;
+				compatible = "riscv,cpu-intc";
+				interrupt-controller;
+			};
+		};
+	};
+
+	memory@10000000{
+		device_type = "memory";
+		reg = <0x0 0x40200000 0x0 0x3fe00000
+			0x1 0x40000000 0x0 0x40000000>;
+	};
+
+	chosen {
+		stdout-path = "/serial@d2500000:115200";
+	};
+
+	resmem: reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		ramoops: ramoops@7FE00000 {
+			compatible = "ramoops";
+			reg = <0x0 0x7FE00000 0x0 0x200000>; /* 16 * (4 * 0x8000) */
+			record-size = <0x8000>;
+			console-size = <0x8000>;
+			status = "off";
+		};
+
+		cmamem: linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0 0x8000000>;
+			alloc-ranges = <0 0x70000000 0 0xFE00000>;
+			linux,cma-default;
+		};
+	};
+
+	cpu0_opp_table: opp-table-cpu0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-12000000 {
+			opp-hz = /bits/ 64 <12000000>;
+			opp-microvolt = <600000>;
+		};
+
+		opp-24000000 {
+			opp-hz = /bits/ 64 <24000000>;
+			opp-microvolt = <700000>;
+		};
+
+		opp-48000000 {
+			opp-hz = /bits/ 64 <48000000>;
+			opp-microvolt = <800000>;
+		};
+	};
+		
+	soc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "thead,tps-evb", "simple-bus";
+		dma-noncoherent;
+		ranges;
+
+		pd_cpu: power-domain@c2f00000 {
+			compatible = "tps,power-domain";
+			#power-domain-cells = <5>;
+			domain-idx = <TPS_DOMAIN_CPU>;
+			domain-nums = < 72 >;
+		};
+
+		pd_sap: power-domain@d0f00000 {
+			compatible = "tps,power-domain";
+			#power-domain-cells = <5>;
+			domain-idx = <TPS_DOMAIN_SAP>;
+			domain-nums = < 11 >;
+		};
+
+		pd_rtc: power-domain@d2e00200 {
+			compatible = "tps,power-domain";
+			#power-domain-cells = <5>;
+			domain-idx = <TPS_DOMAIN_RTC>;
+			domain-nums = < 2 >;
+		};
+ 
+
+		uart0:serial@d2500000 {
+				compatible = "cdns,uart-r1p8";
+				reg = <0x0 0xd2500000 0x0 0x1000>;
+				interrupt-parent = <&plic0>;
+				interrupts = <S_UART0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+                clocks = <&sapclk SR3050_S_APB_CLK>, <&sapclk SR3050_S_UART_CLK>;
+                clock-names = "pclk", "uart_clk";
+				power-domains = <&pd_sap SR3050_PD_UART0_SAP NORMAL>;
+		};
+
+		uart1:serial@d2501000 {
+        		compatible = "cdns,uart-r1p8";
+        		reg = <0x0 0xd2501000 0x0 0x0400>;
+        		interrupt-parent = <&plic0>;
+        		interrupts = <S_UART1_IRQn IRQ_TYPE_LEVEL_HIGH>;
+        		pinctrl-names = "default";
+        		pinctrl-0 = <&pin_uart1>;
+        		power-domains = <&pd_sap SR3050_PD_UART1_SAP NORMAL>;
+        		clocks = <&sapclk SR3050_S_APB_CLK>, <&sapclk SR3050_S_UART_CLK>;
+        		clock-names = "pclk", "uart_clk";
+		};
+
+		uart2:serial@d2502000 {
+        		compatible = "cdns,uart-r1p8";
+        		reg = <0x0 0xd2502000 0x0 0x0400>;
+        		interrupt-parent = <&plic0>;
+        		interrupts = <C_UART2_IRQn IRQ_TYPE_LEVEL_HIGH>;
+        		pinctrl-names = "default";
+        		pinctrl-0 = <&pin_uart2>;
+        		power-domains = <&pd_cpu SR3050_PD_UART2_CPU NORMAL>;
+        		clocks = <&cpuclk SR3050_PAPB_CLK>, <&cpuclk SR3050_UART_CLK>;
+        		clock-names = "pclk", "uart_clk";
+		};
+
+		uart3:serial@d2503000 {
+        		compatible = "cdns,uart-r1p8";
+        		reg = <0x0 0xd2503000 0x0 0x0400>;
+        		interrupt-parent = <&plic0>;
+        		interrupts = <C_UART3_IRQn IRQ_TYPE_LEVEL_HIGH>;
+        		pinctrl-names = "default";
+        		pinctrl-0 = <&pin_uart3>;
+        		power-domains = <&pd_cpu SR3050_PD_UART3_CPU NORMAL>;
+        		clocks = <&cpuclk SR3050_PAPB_CLK>, <&cpuclk SR3050_UART_CLK>;
+        		clock-names = "pclk", "uart_clk";
+		};
+
+		clint0: clint@e4000000 {
+			compatible = "thead,c900-clint";
+			interrupts-extended = <
+				&cpu0_intc 3 &cpu0_intc 7
+				&cpu1_intc 3 &cpu1_intc 7
+				>;
+			reg = <0x0 0xe4000000 0x0 0x10000>;
+			clint,has-no-64bit-mmio;
+		};
+	
+		plic0: interrupt-controller@e0000000 {
+			compatible = "thead,c900-plic";
+			interrupt-controller;
+			interrupts-extended = <
+				&cpu0_intc  0xffffffff &cpu0_intc 9
+				&cpu1_intc  0xffffffff &cpu1_intc 9
+				>;
+			reg = <0x0 0xe0000000 0x0 0x04000000>;
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			riscv,ndev = <194>;
+		};
+
+		mmc0: mmc@c5004000 {
+			compatible = "tps,sd6hc";
+			clock-names = "main";
+			clocks = <&cpuclk SR3050_EMMC0_CLK>;
+			clock-frequency = <36000000>;
+			reg = <0x0 0xc5004000 0x0 0x400>;
+			power-domains = <&pd_cpu SR3050_PD_EMMC0_CPU ALWAYS_ON>;
+			interrupts-extended = <&plic0 C_EMMC0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			bus-width = <1>;
+			sdhci-caps-mask = <0x0 0x200000>;
+			status = "disabled";
+		};
+
+		mmc1: mmc@c5104000 {
+			compatible = "tps,sd6hc";
+			clock-names = "main";
+			clocks = <&cpuclk SR3050_SD1_CLK>;
+			clock-frequency = <36000000>;
+			reg = <0x0 0xc5104000 0x0 0x400>;
+			power-domains = <&pd_cpu SR3050_PD_SD1_CPU ALWAYS_ON>;
+			interrupts-extended = <&plic0 C_SD1_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			bus-width = <1>;
+			sdhci-caps-mask = <0x0 0x200000>;
+			no-1-8-v;
+			status = "disabled";
+		};
+
+		ospi: spi@c5000000 {
+			compatible = "cdns,xspi-nor";
+			reg = <0x0 0xc5000000 0x0 0x100000>,
+				<0x0 0x30000000 0x0 0x1000>,
+				<0x0 0xC5f00000 0x0 0x1000>;
+			reg-names = "io", "sdma", "pwr";
+			interrupts-extended = <&plic0 C_XSPI0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_ospi>;
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			flash@0 {
+				compatible = "w25q128", "jedec,spi-nor";
+				reg = <0>;/* Chip select must be 0/1 */
+				#address-cells = <1>;
+				#size-cells = <1>;
+				spi-tx-bus-width = <1>;
+				spi-rx-bus-width = <1>;
+				spi-max-frequency = <4000000>;
+			};
+		};
+        mosc_clk: mosc_clk {
+            #clock-cells = <0>;
+            compatible = "fixed-clock";
+            clock-frequency = <24000000>;
+        };
+
+		cpuclk: clock-controller@c2f08000 {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			clk-domain = <TPS_DOMAIN_CPU>;
+			compatible = "tps,sr3050-clk,cpu";
+			reg = <0x0 0xc2f08000 0x0 0x1000>;
+			#clock-cells = <1>;
+			c_apll_clk:c_apll_clk {
+				assigned-clocks = <&cpuclk SR3050_APLL_CLK>;
+				assigned-clock-rates = <48000000>;
+			};
+
+			c_dpll_clk {
+				assigned-clocks = <&cpuclk SR3050_DPLL_CLK>;
+				assigned-clock-rates = <96000000>;
+			};
+
+			c_epll_clk {
+				assigned-clocks = <&cpuclk SR3050_EPLL_CLK>;
+				assigned-clock-rates = <96000000>;
+			};
+
+			c_vpll_clk {
+				assigned-clocks = <&cpuclk SR3050_VPLL_CLK>;
+				assigned-clock-rates = <96000000>;
+			};
+
+			c_bpll_clk {
+				assigned-clocks = <&cpuclk SR3050_BPLL_CLK>;
+				assigned-clock-rates = <96000000>;
+			};
+
+			c_bus1_clk {
+				assigned-nco = <0>;
+				assigned-clocks = <&cpuclk SR3050_BUS1_CLK>;
+				assigned-clock-rates = <96000000>;
+			};
+
+			c_bus2_clk {
+				assigned-clocks = <&cpuclk SR3050_BUS2_CLK>;
+				assigned-clock-rates = <48000000>;
+			};
+
+			c_bus3_clk {
+				assigned-clocks = <&cpuclk SR3050_BUS3_CLK>;
+				assigned-clock-rates = <48000000>;
+			};
+
+			c_bus4_clk {
+				assigned-clocks = <&cpuclk SR3050_BUS4_CLK>;
+				assigned-clock-rates = <96000000>;
+			};
+
+			c_bus5_clk {
+				assigned-clocks = <&cpuclk SR3050_BUS5_CLK>;
+				assigned-clock-rates = <24000000>;
+			};
+
+			c_bus6_clk {
+				assigned-clocks = <&cpuclk SR3050_BUS6_CLK>;
+				assigned-clock-rates = <12000000>;
+			};
+		};
+
+		sapclk: clock-controller@d2f08000 {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			clk-domain = <TPS_DOMAIN_SAP>;
+			compatible = "tps,sr3050-clk,sap";
+			reg = <0x0 0xd2f08000 0x0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		ttc0: timer@c2200000 {
+			interrupts-extended =
+				<&plic0 C_TTC0_TIMER0_IRQn IRQ_TYPE_LEVEL_HIGH>,
+				<&plic0 C_TTC0_TIMER1_IRQn IRQ_TYPE_LEVEL_HIGH>,
+				<&plic0 C_TTC0_TIMER2_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_cpu SR3050_PD_TTC0_CPU ALWAYS_ON>;
+			compatible = "cdns,ttc";
+			clocks = <&cpuclk SR3050_TTC_CLK>;
+			timer-width = <32>;
+			reg = <0x0 0xc2200000 0x0 0x1000>;
+			status = "disable";
+		};
+
+		ttc1: timer@c2201000 {
+			interrupts-extended =
+				<&plic0 C_TTC1_TIMER0_IRQn IRQ_TYPE_LEVEL_HIGH>,
+				<&plic0 C_TTC1_TIMER1_IRQn IRQ_TYPE_LEVEL_HIGH>,
+				<&plic0 C_TTC1_TIMER2_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_cpu SR3050_PD_TTC1_CPU ALWAYS_ON>;
+			compatible = "cdns,ttc";
+			clocks = <&cpuclk SR3050_TTC_CLK>;
+			timer-width = <32>;
+			reg = <0x0 0xc2201000 0x0 0x1000>;
+			status = "okay";
+		};
+
+		ttc2: timer@d2200000 {
+			interrupts-extended =
+				<&plic0 S_TTC0_TIMER0_IRQn IRQ_TYPE_LEVEL_HIGH>,
+				<&plic0 S_TTC0_TIMER1_IRQn IRQ_TYPE_LEVEL_HIGH>,
+				<&plic0 S_TTC0_TIMER2_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_sap SR3050_PD_TTC_SAP ALWAYS_ON>;
+			compatible = "cdns,ttc";
+			clocks = <&sapclk SR3050_S_TTC_CLK>;
+			timer-width = <32>;
+			reg = <0x0 0xd2200000 0x0 0x1000>;
+			status = "disable";
+		};
+
+		pinctrl_sap: pin-controller@0{
+			reg = <0 0xd2f09000 0 0x400>;
+			compatible = "tps,tps-pinctrl";
+			pin-domain = <TPS_DOMAIN_SAP>;
+			pin-base = <TPS_PIN_SAP_START>;
+			npins = <TPS_PIN_PER_DOMAIN_CNT>;
+		};
+
+		pinctrl_cpu: pin-controller@1{
+			reg = <0 0xc2f09000 0 0x400>;
+			compatible = "tps,tps-pinctrl";
+			pin-domain = <TPS_DOMAIN_CPU>;
+			pin-base = <TPS_PIN_CPU_START>;
+			npins = <TPS_PIN_PER_DOMAIN_CNT>;
+		};
+
+		pm_rtc: pm_rtc@d2e00000
+		{
+			reg = <0 0xd2e00000 0 0x80>;
+			compatible = "tps,pm-rtc";
+
+			pinctrl_rtc: pin-controller@2{
+				compatible = "tps,tps-pinctrl";
+				pin-domain = <TPS_DOMAIN_RTC>;
+				pin-base = <TPS_PIN_RTC_START>;
+				npins = <TPS_PIN_PER_DOMAIN_CNT>;
+				gpio-controller;
+				#gpio-cells = <2>;
+			};
+
+			reset {
+				compatible = "tps,reset";
+			};
+
+			suspend {
+				compatible = "tps,suspend";
+				resume-gpios = <&pinctrl_rtc 0 GPIO_ACTIVE_LOW>;
+				interrupt-parent = <&plic0>;
+				interrupts = <RTC5_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			};
+		};
+
+		rtc_info@d2e000c0 {
+			reg = <0 0xd2e000c0 0 0xa0>;
+			compatible = "tps,rtc-info";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			resume_addr: opensbi_resume_addr {
+				reg = <0x0 0x8>;
+			};
+
+			suspend_flag: suspend_flag {
+				reg = <0x8 0x1>;
+			};
+		};
+
+		gpio_sap: gpio0-controller@d2100000 {
+			compatible = "tps,tps-gpio";
+			reg = <0x0 0xd2100000 0x0 0x1000>;
+			power-domains = <&pd_sap SR3050_PD_GPIO_SAP NORMAL>;
+			#gpio-cells = <2>;
+			gpio-base = <TPS_PIN_SAP_START>;
+			ngpios = <18>;
+			gpio-controller;
+			interrupt-controller;
+			interrupt-parent = <&plic0>;
+			interrupts = <S_GPIO0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		gpio_cpu: gpio1-controller@c2100000 {
+			compatible = "tps,tps-gpio";
+			reg = <0x0 0xc2100000 0x0 0x1000>;
+			power-domains = <&pd_cpu SR3050_PD_GPIO_CPU NORMAL>;
+			#gpio-cells = <2>;
+			gpio-base = <TPS_PIN_CPU_START>;
+			ngpios = <99>;
+			gpio-controller;
+			interrupt-controller;
+			interrupt-parent = <&plic0>;
+			interrupts = 	<C_GPIO0_IRQn IRQ_TYPE_LEVEL_HIGH>,
+							<C_GPIO1_IRQn IRQ_TYPE_LEVEL_HIGH>,
+							<C_GPIO2_IRQn IRQ_TYPE_LEVEL_HIGH>,
+							<C_GPIO3_IRQn IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		dmac0: dmac@c5500000 {
+			compatible = "snps,axi-dma-1.01a";
+			reg = <0x0 0xc5500000 0x0 0x1000>;
+			interrupt-parent = <&plic0>;
+			interrupts = <C_DMA0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			dma-noncoherent;
+			clocks = <&cpuclk SR3050_BUS2_CLK>, <&cpuclk SR3050_PAPB_CLK>;
+			clock-names = "core-clk", "cfgr-clk";
+			power-domains = <&pd_cpu SR3050_PD_DMA0_CPU ALWAYS_ON>;
+			#dma-cells = <1>;
+			dma-channels = <8>;
+			snps,block-size = <65536 65536 65536 65536 65536 65536 65536 65536>;
+			snps,priority = <0 1 2 3 4 5 6 7>;
+			snps,dma-masters = <1>;
+			snps,data-width = <4>;
+			snps,axi-max-burst-len = <16>;
+			status = "okay";
+		};
+
+		dmac1: tee_dmac@c5600000 {
+			compatible = "snps,axi-dma-1.01a";
+			reg = <0x0 0xc5600000 0x0 0x1000>;
+			interrupt-parent = <&plic0>;
+			interrupts = <C_DMA1_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			dma-noncoherent;
+			clocks = <&cpuclk SR3050_BUS2_CLK>, <&cpuclk SR3050_PAPB_CLK>;
+			clock-names = "core-clk", "cfgr-clk";
+			power-domains = <&pd_cpu SR3050_PD_DMA1_CPU ALWAYS_ON>;
+			#dma-cells = <1>;
+			dma-channels = <8>;
+			snps,block-size = <65536 65536 65536 65536 65536 65536 65536 65536>;
+			snps,priority = <0 1 2 3 4 5 6 7>;
+			snps,dma-masters = <1>;
+			snps,data-width = <4>;
+			snps,axi-max-burst-len = <16>;
+			status = "okay";
+		};
+
+		i2c0: i2c@d2400000 {
+			compatible = "cdns,i2c-r1p14";
+			reg = <0x0 0xd2400000 0x0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupt-parent = <&plic0>;
+			interrupts = <S_IIC0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			clocks = <&sapclk  SR3050_S_APB_CLK>;
+			power-domains = <&pd_sap SR3050_PD_IIC0_SAP ALWAYS_ON>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_i2c0>;
+
+			axp15060: pmic@36 {
+				compatible = "x-powers,axp15060";
+				reg = <0x36>;
+				interrupts = <0>;
+				interrupt-controller;
+				#interrupt-cells = <1>;
+				
+				regulators {
+					vddio_rtc_1p8: rtc-ldo {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <1800000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "rtcldo";
+					};
+
+					vdd_rxa_pwren: cldo1 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "cldo1";
+					};
+
+					vdd_cpu_pwren: cldo2 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "cldo2";
+					};
+					
+					bldo1: bldo1 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "bldo1";
+					};
+
+					vdda_0p8_s0: bldo2 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "bldo2";
+					};
+
+					vdda_1p2_s0: bldo3 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "bldo3";
+					};
+
+					vddio_sap_1p8_l: bldo4 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "bldo4";
+					};
+
+					vdda_1p8_s0: bldo5 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "bldo5";
+					};
+
+					vddio_sd1_l: aldo1 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "aldo1";
+					};
+
+					vsys_3p3_s3_en: aldo2 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "aldo2";
+					};
+
+					vsys_5p0_s0_en: aldo3 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "aldo3";
+					};
+
+					vsys_1p8_s0_en: aldo4 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "aldo4";
+					};
+
+					vdda_3p3_s0: aldo5 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-name = "aldo5";
+					};
+
+					vsys_1p8_s3: dcdc1 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <1500000>;
+						regulator-max-microvolt = <3400000>;
+						regulator-name = "dcdc1";
+					};
+
+					vdd_soc: dcdc2 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <500000>;
+						regulator-max-microvolt = <1200000>;
+						regulator-name = "dcdc2";
+					};
+
+					vddq_ddr_0p6: dcdc4 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <500000>;
+						regulator-max-microvolt = <1200000>;
+						regulator-name = "dcdc4";
+					};
+
+					vdd2_ddr_1p1: dcdc5 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <810000>;
+						regulator-max-microvolt = <1120000>;
+						regulator-name = "dcdc5";
+					};
+
+					vdd_ddr_0p8: dcdc6 {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <500000>;
+						regulator-max-microvolt = <3400000>;
+						regulator-name = "dcdc6";
+					};
+					vcpus: cpusldo {
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-min-microvolt = <700000>;
+						regulator-max-microvolt = <1400000>;
+						regulator-name = "vcpus";
+					};
+				};
+			};
+		};
+
+		i2c1: i2c@d2401000 {
+			compatible = "cdns,i2c-r1p14";
+			reg = <0x0 0xd2401000 0x0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupt-parent = <&plic0>;
+			interrupts = <S_IIC1_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			clocks = <&sapclk SR3050_S_APB_CLK>;
+			power-domains = <&pd_sap SR3050_PD_IIC1_SAP ALWAYS_ON>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_i2c1>;
+
+			eeprom@50 {
+				compatible = "atmel,24c01";
+				reg = <0x50>;
+				pagesize = <16>;
+				size = <1024>;
+				address-width = <8>;
+				label = "eeprom";
+				num-addresses = <4>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				machinesn: eep@0 {
+					label = "machinesn";
+					reg = <0x00 0x08>;
+				};
+
+				pcbsn: eep@8 {
+					label = "pcbsn";
+					reg = <0x08 0x08>;
+				};
+			};
+
+			vdd_cpu_rxa@60 {
+				compatible = "isl68221";
+				reg = <0x60>;
+			};
+		};
+
+		i2c2: i2c@c2400000 {
+			compatible = "cdns,i2c-r1p14";
+			reg = <0x0 0xc2400000 0x0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupt-parent = <&plic0>;
+			interrupts = <C_IIC2_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			clocks = <&cpuclk  SR3050_PAPB_CLK>;
+			power-domains = <&pd_cpu SR3050_PD_IIC2_CPU ALWAYS_ON>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_i2c2>;
+
+			vdd1_ddr_1p8_hwmon: ina226@40 {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vdd1_ddr_1p8";
+				reg = <0x40>;
+				shunt-resistor = <5000>;
+			};
+
+			vddq_ddr_0p6_hwmon: ina226@44 {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vddq_ddr_0p6";
+				reg = <0x44>;
+				shunt-resistor = <5000>;
+			};
+
+			vdd2_ddr_1p1_hwmon: ina226@41 {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vdd2_ddr_1p1";
+				reg = <0x41>;
+				shunt-resistor = <5000>;
+			};
+
+			vdd_ddr_0p8_hwmon: ina226@45 {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vdd_ddr_0p8";
+				reg = <0x45>;
+				shunt-resistor = <5000>;
+			};
+
+			vsys_4p1_s5_hwmon: ina226@47 {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vsys_4p1_s5";
+				reg = <0x47>;
+				shunt-resistor = <5000>;
+			};
+
+			vdd_soc_hwmon: ina226@46 {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vdd_soc";
+				reg = <0x46>;
+				shunt-resistor = <5000>;
+			};
+
+			vsys_3p3_s3_hwmon: ina226@49 {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vsys_3p3_s3";
+				reg = <0x49>;
+				shunt-resistor = <5000>;
+			};
+
+			vsys_5p0_s0_hwmon: ina226@48 {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vsys_5p0_s0";
+				reg = <0x48>;
+				shunt-resistor = <5000>;
+			};
+
+			vsys_1p8_s0_hwmon: ina226@4c {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vsys_1p8_s0";
+				reg = <0x4c>;
+				shunt-resistor = <5000>;
+			};
+
+			vdd_sap_0p8_hwmon: ina226@4d {
+				compatible = "ti,ina226";
+				#io-channel-cells = <1>;
+				label = "ina226-vdd_sap_0p8";
+				reg = <0x4d>;
+				shunt-resistor = <5000>;
+			};
+
+		};
+
+		i2c3: i2c@c2401000 {
+			compatible = "cdns,i2c-r1p14";
+			reg = <0x0 0xc2401000 0x0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupt-parent = <&plic0>;
+			interrupts = <C_IIC3_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <100000>;
+			clocks = <&cpuclk SR3050_PAPB_CLK>;
+			power-domains = <&pd_cpu SR3050_PD_IIC3_CPU ALWAYS_ON>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_i2c3>;
+
+			es8388: codec@11{
+				compatible = "everest,es8388";
+				reg = <0x11>;
+				pagesize = <1>;
+			};
+		};
+
+		i2s0: i2s@c2700000 {
+			compatible = "cdns,i2s-sc";
+			reg = <0x0 0xc2700000 0x0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			//interrupt-parent = <&plic0>;
+			//interrupts = <C_IIS0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpuclk SR3050_IIS_CLK>;
+			power-domains = <&pd_cpu SR3050_PD_IIS0_CPU ALWAYS_ON>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_i2s0>;
+			dmas = <&dmac0 10>, <&dmac0 11>;
+			dma-names = "tx","rx";
+		};
+
+		sound@0 {
+			compatible = "tps,sound-card";
+			i2s-controller = <&i2s0>;
+			sound-codec = <&es8388>;
+		};
+
+		spi1: spi@c2300000 {
+			compatible = "arm,pl022", "arm,primecell";
+			arm,primecell-periphid = <0x00041022>;
+			reg = <0x0 0xc2300000 0x0 0x1000>;
+			interrupts-extended = <&plic0 C_SPI1_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			num-cs = <1>;
+			power-domains = <&pd_cpu SR3050_PD_SPI1_CPU NORMAL>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_spi1>;
+			cs-gpios = <&gpio_cpu 48 GPIO_ACTIVE_LOW>;
+			status = "disabled";
+			clocks = <&cpuclk SR3050_SSP_CLK>;
+			clock-names = "apb_pclk";
+			dmas = <&dmac0 0>, <&dmac0 1>;
+			dma-names = "tx", "rx";
+			spidev1: spidev@1 {
+				compatible = "rohm,dh2228fv";
+				reg = <0>;  
+				spi-max-frequency = <4000000>;
+			};  
+		};
+
+		spi0: spi@d2300000 {
+			compatible = "arm,pl022", "arm,primecell";
+			arm,primecell-periphid = <0x00041022>;
+			reg = <0x0 0xd2300000 0x0 0x1000>;
+			interrupts-extended = <&plic0 S_SPI0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			num-cs = <1>;
+			power-domains = <&pd_sap SR3050_PD_SPI0_SAP NORMAL>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_spi0>;
+			cs-gpios = <&gpio_sap 7 GPIO_ACTIVE_LOW>;
+			status = "okay";
+			clocks = <&sapclk SR3050_S_SSP_CLK>;
+			clock-names = "apb_pclk";
+			spidev0: spidev@0 {
+				compatible = "rohm,dh2228fv";
+				reg = <0>;
+				spi-max-frequency = <125000000>;
+				status = "disabled";
+			};
+			flash: flash@0 {
+				compatible = "spi-nand";
+				reg = <0>;
+				spi-max-frequency = <4000000>;
+				status = "okay";
+			};
+		};
+
+		watchdog: watchdog@c2000000 {
+			compatible = "cdns,wdt-r1p2";
+			reg = <0x0 0xc2000000 0x0 0x1000>;
+			interrupts-extended = <&plic0 C_WDT_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_cpu SR3050_PD_WDT_CPU ALWAYS_ON>;
+			clocks = <&cpuclk SR3050_PAPB_CLK>;
+			reset-on-timeout = <1>;
+			status = "off";
+		};
+
+		macb0: ethernet@c4400000 {
+			compatible = "cdns,macb";
+			reg = <0x0 0xc4400000 0x0 0x2000
+				0x0 0xc4f01000 0x0 0x2000>;
+			power-domains = <&pd_cpu SR3050_PD_GMAC0_CPU NORMAL>;
+            clock-names = "pclk", "hclk", "tx_clk", "rx_clk", "tsu_clk";
+		    clocks = <&cpuclk SR3050_PAPB_CLK>, <&cpuclk SR3050_GMAC_GTX_CLK>, <&cpuclk SR3050_GMAC_REF_CLK>, <&cpuclk SR3050_GMAC_REF_CLK>, <&cpuclk SR3050_GMAC_TSU_CLK>;
+			interrupts = <C_GMAC0_Q_IRQn IRQ_TYPE_LEVEL_HIGH>,
+								   <C_GMAC0_Q_IRQn IRQ_TYPE_LEVEL_HIGH>,
+									 <C_GMAC0_Q_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-parent = <&plic0>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_macb0>;
+			phy-mode = "rmii";
+			local-mac-address = [e6 e8 dc ff db de];
+			reset-gpios = <&gpio_cpu 41 GPIO_ACTIVE_LOW>;
+			reset-delay-us = <150000>;
+			reset-post-delay-us = <100000>;
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			eth0_phy: ethernet-phy@0 {
+				compatible = "ethernet-phy-ieee802.3-c22";
+				reg = <0x0>;
+				max-speed = <100>;
+			};
+		};
+
+		macb1: ethernet@c4500000 {
+			compatible = "cdns,macb";
+			reg = <0x0 0xc4500000 0x0 0x2000
+				0x0 0xc4f01400 0x0 0x2000>;
+			power-domains = <&pd_cpu SR3050_PD_GMAC1_CPU NORMAL>;
+            clock-names = "pclk", "hclk", "tx_clk", "rx_clk", "tsu_clk";
+		    clocks = <&cpuclk SR3050_PAPB_CLK>, <&cpuclk SR3050_GMAC_GTX_CLK>, <&cpuclk SR3050_GMAC_REF_CLK>, <&cpuclk SR3050_GMAC_REF_CLK>, <&cpuclk SR3050_GMAC_TSU_CLK>;
+			interrupts = <C_GMAC1_Q_IRQn IRQ_TYPE_LEVEL_HIGH>,
+								 	 <C_GMAC1_Q_IRQn IRQ_TYPE_LEVEL_HIGH>,
+									 <C_GMAC1_Q_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-parent = <&plic0>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pin_macb1>;
+			phy-mode = "rgmii";
+			local-mac-address = [e6 e8 dc ff db de];
+			reset-gpios = <&gpio_cpu 57 GPIO_ACTIVE_LOW>;
+			reset-delay-us = <150000>;
+			reset-post-delay-us = <100000>;
+			txc-skew-ps = <0>;
+			rxc-skew-ps = <0>;
+			status = "disabled";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			eth1_phy: ethernet-phy@0 {
+				compatible = "ethernet-phy-ieee802.3-c22";
+				reg = <0x0>;
+				max-speed = <1000>;
+			};
+		};
+
+		usb: usb@0  {
+			compatible = "tps,usb3";
+			power-domains = <&pd_cpu SR3050_PD_USB0_CPU NORMAL>;
+			clocks = <&cpuclk SR3050_USB_LPM_CLK>, 
+					<&cpuclk SR3050_USB_APP_CLK>,
+					<&cpuclk SR3050_USB_STB_CLK>,
+					<&cpuclk SR3050_USB2_REF_CLK>,
+					<&cpuclk SR3050_USB3_REF_CLK>;
+			clock-names = "lpm", "app", "stb", "ref2", "ref3";
+			//assigned-clocks = <&cpuclk IMX_SC_R_USB_2 IMX_SC_PM_CLK_MST_BUS>;
+			//assigned-clock-rates = <250000000>;
+			usb0_id_det-gpios = <&gpio_cpu 72 GPIO_ACTIVE_HIGH>;
+			//usb1_id_det-gpios = <&gpio_cpu 90 GPIO_ACTIVE_HIGH>;
+			//usb2_id_det-gpios = <&gpio_cpu 91 GPIO_ACTIVE_HIGH>;
+			//usb3_id_det-gpios = <&gpio_cpu 92 GPIO_ACTIVE_HIGH>;
+			status = "disabled";
+
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			usb0: usb@c4000000 {
+				compatible = "cdns,usb3";
+				reg = <0x00 0xc4000000 0x00 0x10000>,
+					  <0x00 0xc4010000 0x00 0x10000>,
+					  <0x00 0xc4020000 0x00 0x10000>;
+				reg-names = "otg", "xhci", "dev";
+				interrupt-parent = <&plic0>;
+				interrupts = <C_USB0_HOST_IRQn	IRQ_TYPE_LEVEL_HIGH
+							C_USB0_DEVICE_IRQn	IRQ_TYPE_LEVEL_HIGH
+							C_USB0_OTG_IRQn		IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "host", "peripheral", "otg";
+				maximum-speed = "super-speed";
+				dr_mode = "host";
+			};
+		};
+
+		otp@d0003400 {
+			compatible = "pufs,otp";
+			reg = <0x0 0xd0003400 0x0 0x400>, <0x0 0xd2f09404 0x0 0x4>;
+			power-domains = <&pd_cpu SR3050_PD_PUFCC_SAP ALWAYS_ON>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			check-secure-flag;
+
+			secure_boot: otp@0 {
+				reg = <0 4>;
+			};
+			cpu: otp@4 {
+				reg = <4 1>;
+			};
+			npu: otp@5 {
+				reg = <5 1>;
+			};
+			fatfs: otp@6 {
+				reg = <6 1>;
+			};
+			dlyline_1000m: otp@7 {
+				reg = <7 9>;
+			};
+			dlyline_100m: otp@16 {
+				reg = <16 9>;
+			};
+			user_data0: otp@25 {
+				reg = <25 7>;
+			};
+			pub_hash: otp@32 {
+				reg = <32 96>;
+			};
+			hw_data: otp@128 {
+				reg = <128 128>;
+			};
+			test_data: otp@256 {
+				reg = <256 32>;
+			};
+			mac0: otp@288 {
+				reg = <288 6>;
+			};
+			mac1: otp@294 {
+				reg = <294 6>;
+			};
+			mac2: otp@300 {
+				reg = <300 6>;
+			};
+			mac3: otp@306 {
+				reg = <306 6>;
+			};
+			decode: otp@312 {
+				reg = <312 4>;
+			};
+			user_data1: otp@316 {
+				reg = <316 68>;
+			};
+			priv_k0: otp@384 {
+				reg = <384 68>;
+			};
+		};
+
+		puf@d0003300 {
+			compatible = "pufs,puf";
+			reg = <0x0 0xd0003300 0x0 0x100>;
+			power-domains = <&pd_cpu SR3050_PD_PUFCC_SAP ALWAYS_ON>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			uid: uid@0 {
+				reg = <0 32>;
+			};
+		};
+
+		cae: eip97@0 {
+			compatible = "tps,cae";
+			power-domains = <&pd_cpu SR3050_PD_CAE_BASE_CPU NORMAL>;
+			clocks = <&cpuclk SR3050_CAE_PERI_CLK>;
+			clock-names = "peri";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			cae_0: eip97_0@c5400000 {
+				compatible = "security-ip-97";
+				power-domains = <&pd_cpu SR3050_PD_CAE0_CPU NORMAL>;
+				interrupt-parent = <&plic0>;
+				interrupts = <C_CAE4_IRQn IRQ_TYPE_LEVEL_HIGH>,
+					     <C_CAE0_IRQn IRQ_TYPE_LEVEL_HIGH>,
+					     <C_CAE1_IRQn IRQ_TYPE_LEVEL_HIGH>,
+					     <C_CAE2_IRQn IRQ_TYPE_LEVEL_HIGH>,
+					     <C_CAE3_IRQn IRQ_TYPE_LEVEL_HIGH>;
+				reg = <0x0 0xc5400000 0x0 0x80000>;
+			};
+			cae_1: eip97_1@c5480000 {
+				compatible = "security-ip-97";
+				power-domains = <&pd_cpu SR3050_PD_CAE1_CPU NORMAL>;
+				interrupt-parent = <&plic0>;
+				interrupts = <C_CAE9_IRQn IRQ_TYPE_LEVEL_HIGH>,
+					     <C_CAE5_IRQn IRQ_TYPE_LEVEL_HIGH>,
+					     <C_CAE6_IRQn IRQ_TYPE_LEVEL_HIGH>,
+					     <C_CAE7_IRQn IRQ_TYPE_LEVEL_HIGH>,
+					     <C_CAE8_IRQn IRQ_TYPE_LEVEL_HIGH>;
+				reg = <0x0 0xc5480000 0x0 0x80000>;
+			};
+		};
+
+		refclk1hz: refclk1hz@0 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <1>;
+		};
+
+		rtc0: rtc@d2e00400 {
+			compatible = "cdns,rtc-r109v3";
+			reg = <0x0 0xd2e00400 0x0 0x0200>;
+			status = "okay";
+			clock-names = "pclk", "ref_clk";
+			clocks = <&sapclk SR3050_S_APB_CLK>, <&refclk1hz>;
+			power-domains = <&pd_rtc SR3050_PD_RTC_RTC ALWAYS_ON>;
+			interrupt-parent = <&plic0>;
+			interrupts = <RTC4_IRQn IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		cpupwm0: pwm0@c2800000 {
+			compatible = "cdns,cdns-pwm";
+			reg = <0x0 0xc2800000 0x0 0x1000>;
+			status = "okay";
+			interrupt-parent = <&plic0>;
+			interrupts = <C_PWM0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_cpu SR3050_PD_PWM0_CPU ALWAYS_ON>;
+			clock-names = "pclk";
+			clocks = <&cpuclk SR3050_PAPB_CLK>;
+			#pwm-cells = <3>;
+			pinctrl-0 = <&pin_c_pwm0>;
+			pinctrl-names = "default";
+		};
+
+		sappwm0: pwm0@d2800000 {
+			compatible = "cdns,cdns-pwm";
+			reg = <0x0 0xd2800000 0x0 0x1000>;
+			status = "okay";
+			interrupt-parent = <&plic0>;
+			interrupts = <S_PWM0_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_sap SR3050_PD_PWM0_SAP ALWAYS_ON>;
+			clock-names = "pclk";
+			clocks = <&sapclk SR3050_S_APB_CLK>;
+			pinctrl-0 = <&pin_s_pwm0>;
+			pinctrl-names = "default";
+			#pwm-cells = <3>;
+		};
+
+		rtcpwm0: pwm0@d2e00800 {
+			compatible = "cdns,cdns-pwm";
+			reg = <0x0 0xd2e00800 0x0 0x1000>;
+			status = "okay";
+			interrupt-parent = <&plic0>;
+			interrupts = <RTC10_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_sap SR3050_PD_PWM0_RTC ALWAYS_ON>;
+			clock-names = "pclk";
+			clocks = <&sapclk SR3050_S_APB_CLK>;
+		};
+
+		mu0: mailbox@c2600000 {
+			compatible = "tps,tps-mailbox";
+			reg = <0x0 0xc2600000 0x0 0x0080>;
+			status = "okay";
+			power-domains = <&pd_cpu SR3050_PD_MU_CPU ALWAYS_ON>;
+			interrupt-parent = <&plic0>;
+			interrupts = <C_MU_A2B_IRQn IRQ_TYPE_LEVEL_HIGH>,
+						 <C_MU_B2A_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "MU_A2B", "MU_B2A";
+			clocks = <&cpuclk SR3050_MU_CLK>;
+			clock-names = "ws_mu_clk";
+			#mbox-cells = <1>;
+			num_chans = <1>;
+		};
+		
+		mu1: mailbox@d2600000 {
+			compatible = "tps,tps-mailbox";
+			reg = <0x0 0xd2600000 0x0 0x0080>;
+			status = "okay";
+			power-domains = <&pd_sap SR3050_PD_MU_SAP ALWAYS_ON>;
+			interrupt-parent = <&plic0>;
+			interrupts = <S_MU_A2B_IRQn IRQ_TYPE_LEVEL_HIGH>,
+						 <S_MU_B2A_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "MU_A2B", "MU_B2A";
+			clocks = <&sapclk SR3050_S_MU_CLK>;
+			clock-names = "ws_mu_clk";
+			#mbox-cells = <1>;
+			num_chans = <1>;
+		};
+
+		mailbox_test@0 {
+			status 			= "okay";
+			compatible      = "mailbox-test";
+			mboxes          = <&mu0 0>;
+			mbox-names      = "tx";
+		};//test purpose only
+
+		backlight@0 {
+			compatible = "pwm-backlight";
+			pwms = <&sappwm0 0 5000000 0>;
+			brightness-level = <0 4 8 16 32 64 128 255>;
+			default-brightness-level = <7>;
+			status = "okay";
+		};
+
+		env: partition@0 {
+ 		       	compatible = "u-boot,mmcenv";
+			env-config = <0x420000 0x20000>;
+			ethaddr: ethaddr {
+                		#nvmem-cell-cells = <1>;
+				nvmem-cell-names = "ethaddr";
+            		};
+		};
+
+		hsm@c2f08c00 {
+			compatible = "tps,hsm";
+			reg = <0x0 0xc2f08c00 0x0 0x100>;
+			nvmem-cells = <&resume_addr>, <&suspend_flag>;
+			nvmem-cell-names = "resume_addr", "suspend_flag";
+		};
+
+		pmic {
+			compatible = "axp15060,pmic";
+		};
+
+		pvt@c2900000 {
+			compatible = "baikal,tps-pvt";
+			reg = <0 0xc2900000 0 0x1000>;
+			power-domains = <&pd_cpu SR3050_PD_PVT_CPU ALWAYS_ON>;
+			#thermal-sensor-cells = <0>;
+			interrupt-parent = <&plic0>;
+			interrupts = <C_PVT0_IRQn IRQ_TYPE_LEVEL_HIGH>,
+						<C_PVT1_IRQn IRQ_TYPE_LEVEL_HIGH>,
+						<C_PVT2_IRQn IRQ_TYPE_LEVEL_HIGH>;
+			tps,pvt-channel-count = <3>;
+			baikal,pvt-temp-offset-millicelsius = <1000>;
+			clocks = <&cpuclk SR3050_PAPB_CLK>;
+			clock-names = "pclk";
+		};
+
+		dummy_reg_cpu: regulator-virtual {
+			compatible = "regulator-virtual";
+			regulator-name = "dummy-cpu-supply";
+			regulator-min-microvolt = <100000>;
+			regulator-max-microvolt = <1500000>;
+			regulator-boot-on;
+			regulator-always-on;
+    	};
+
+		leds: leds {
+			compatible = "gpio-leds";
+
+			led1: led1 {
+				gpios = <&gpio_cpu 10 GPIO_ACTIVE_LOW>;
+				linux,default-trigger = "default-on";
+			};
+		};
+		onewire {
+			compatible = "w1-gpio";
+			gpios = <&gpio_cpu 13 GPIO_ACTIVE_LOW>;
+			status = "disabled";
+		};
+	}; // soc end
+	system {
+		compatible = "tps,sr3050";
+		linux,revision = <0x888990>;
+		// rasp pi style revision code
+		// 1000 1000 1000 1001 1001 0000
+		// Mark Manu Proc Type      rev 
+	};
+};
+
+&mmc0 {
+	status = "okay";
+};
+
+&mmc1 {
+	status = "okay";
+};
+
+&cpu0 {
+	clocks = <&cpuclk SR3050_CPU_CLK>;
+	operating-points-v2 = <&cpu0_opp_table>;
+	cpu-supply = <&dummy_reg_cpu>;
+};
+
+&cpu1 {
+	clocks = <&cpuclk SR3050_CPU_CLK>;
+	operating-points-v2 = <&cpu0_opp_table>;
+	cpu-supply = <&dummy_reg_cpu>;
+};
+
+/ {
+	__overrides__ {
+		serial0 = <&uart0>, "status";
+		serial1 = <&uart1>, "status";
+		serial2 = <&uart2>, "status";
+		serial3 = <&uart3>, "status";
+		spi0 = <&spi0>, "status";
+		spi1 = <&spi1>, "status";
+		i2c1 = <&i2c1>, "status";
+		i2c3 = <&i2c3>, "status";
+		ramoops = <&ramoops>,"status";
+		base-addr = <&ramoops>,"reg#0";
+		total-size = <&ramoops>,"reg#8";
+		record-size = <&ramoops>,"record-size:0";
+		console-size = <&ramoops>,"console-size:0";
+		watchdog = <&watchdog>,"status";
+		act_led_trigger = <&led1>,"linux,default-trigger";
+		eth0_max_speed = <&eth0_phy>,"max-speed:0";
+		eth1_max_speed = <&eth1_phy>,"max-speed:0";
+		cpu_freq = <&c_apll_clk>,"assigned-clock-rates:0";
+	};
+};
+#include "sr3050-pins.dtsi"
