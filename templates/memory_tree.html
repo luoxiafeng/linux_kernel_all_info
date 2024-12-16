@@ -1,0 +1,46 @@
+<!-- Version: v2.9 -->
+{% extends "base.html" %}
+
+{% block content %}
+<h2>内存树信息</h2>
+{% if memory_node %}
+    <h3>内存节点: {{ memory_node.name }}</h3>
+    <p>物理地址和大小（从reg属性中获取）:</p>
+    <table border="1" cellpadding="5" cellspacing="0">
+        <tr>
+            <th>Base Address</th>
+            <th>Size</th>
+            <th>Type</th>
+        </tr>
+        {% if memory_node.attr.regaddr and memory_node.attr.regsize %}
+            <tr>
+                <td>0x{{ '%X'|format(memory_node.attr.regaddr[0]) }}</td>
+                <td>0x{{ '%X'|format(memory_node.attr.regsize[0]) }}</td>
+                <td>System Memory</td>
+            </tr>
+            {% for rn in reserved_nodes %}
+                {% if rn.attr.regaddr and rn.attr.regsize %}
+                    <tr style="background-color: #D3D3D3;">
+                        <td>0x{{ '%X'|format(rn.attr.regaddr[0]) }}</td>
+                        <td>0x{{ '%X'|format(rn.attr.regsize[0]) }}</td>
+                        <td>Reserved</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td>N/A</td>
+                        <td>N/A</td>
+                        <td>Reserved (No reg info)</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="3">没有从该节点中获取到reg信息</td>
+            </tr>
+        {% endif %}
+    </table>
+{% else %}
+    <p>没有找到memory节点（或以memory开头的节点）</p>
+{% endif %}
+
+{% endblock %}

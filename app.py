@@ -34,6 +34,13 @@ class attr:
 
 global_path = "/"
 parent_node = None
+power_domain_controllers = []
+power_domain_relations = []
+clock_controllers = []
+clock_relations = []
+memory_node = None
+reserved_memory_nodes = []
+
 
 def find_inherited_cells(node):
     """递归向上查找 addr_cells 和 size_cells"""
@@ -54,6 +61,14 @@ def find_inherited_cells(node):
 
 def parse_dts_file(dts_file):
     global global_path, parent_node
+    global power_domain_controllers, power_domain_relations, clock_controllers, clock_relations, memory_node, reserved_memory_nodes
+    power_domain_controllers.clear()
+    power_domain_relations.clear()
+    clock_controllers.clear()
+    clock_relations.clear()
+    memory_node = None
+    reserved_memory_nodes.clear()
+    
     root = Node(name="root", path="/")
     root_attr = attr()
     root.attr = root_attr
@@ -245,6 +260,81 @@ def parse_dts_file(dts_file):
                     if '#size-cells' in stripped_line:
                         raw_value = stripped_line.split('=')[1].strip('<>; ')
                         root.attr.size_cells = int(raw_value, 0)
+
+     # 解析节点，获取全部节点列表
+    all_nodes = []
+    def collect_nodes(node):
+        all_nodes.append(node)
+        for c in node.children:
+            collect_nodes(c)
+    collect_nodes(root)
+
+    # 电源域解析
+    pd_phandle_map = {}
+    for node in all_nodes:
+        has_pdcells = any('#power-domain-cells' in l for l in node.content)
+        if has_pdcells:
+            power_domain_controllers.append(node)
+            if node.attr.phandle != 0:
+                pd_phandle_map[node.attr.phandle] = node
+
+    for node in all_nodes:
+        lines_with_pd = [l for l in node.content if 'power-domains' in l and '=' in l]
+        for line_pd in lines_with_pd:
+            pd_str = line_pd.split('=')[1].strip().strip('<>;')
+            pd_vals = pd_str.split()
+            if pd_vals:
+                val = pd_vals[0]
+                if val.startswith("0x"):
+                    pval = int(val,16)
+                else:
+                    pval = int(val)
+                if pval in pd_phandle_map:
+                    power_domain_relations.append((pd_phandle_map[pval], node))
+
+    # 时钟树解析
+    clock_phandle_map = {}
+    for node in all_nodes:
+        if 'clock-controller' in node.name:
+            clock_controllers.append(node)
+            if node.attr.phandle != 0:
+                clock_phandle_map[node.attr.phandle] = node
+
+    for node in all_nodes:
+        clock_lines = [l for l in node.content if 'clocks' in l and '=' in l]
+        for cline in clock_lines:
+            cl_str = cline.split('=')[1].strip().strip('<>;').replace(',','')
+            cl_vals = cl_str.split()
+            if cl_vals:
+                val = cl_vals[0]
+                if val.startswith("0x"):
+                    cval = int(val,16)
+                else:
+                    cval = int(val)
+                if cval in clock_phandle_map:
+                    clock_relations.append((clock_phandle_map[cval], node))
+
+    # 内存树解析
+    # ---- 修改开始 (3.1) 如果memory_node没有找到，则查找以memory开头的节点 ----
+    memory_node_found = False
+    for node in all_nodes:
+        if node.name == 'memory':
+            memory_node = node
+            memory_node_found = True
+            break
+
+    if not memory_node_found:
+        for node in all_nodes:
+            if node.name.startswith('memory'):
+                memory_node = node
+                memory_node_found = True
+                break
+    # ---- 修改结束 ----
+
+    for node in all_nodes:
+        if node.name == 'reserved-memory':
+            for c in node.children:
+                reserved_memory_nodes.append(c)
 
     return root
 
@@ -504,6 +594,78 @@ def interrupt_tree_graph():
     uml_code += "@enduml"
 
     return render_template('interrupt_tree_graph.html', uml_code=uml_code)
+
+# 电源域页面
+@app.route('/power_domain')
+def power_domain():
+    root = get_parsed_root()
+    if not root:
+        return "尚未选择或上传有效的 dts 文件", 400
+    global power_domain_controllers, power_domain_relations
+    # 为满足(2.2)的要求，需要找出被多个电源域控制的节点，并为其分配相同的背景色
+    node_domain_counts = {}
+    for pd, node in power_domain_relations:
+        node_domain_counts.setdefault(node, 0)
+        node_domain_counts[node] += 1
+
+    # 生成颜色映射
+    color_palette = ["#FFD700", "#ADFF2F", "#FF69B4", "#87CEFA", "#FFA07A"]  # 颜色列表
+    node_color_map = {}
+    color_index = 0
+    for node, count in node_domain_counts.items():
+        if count > 1:
+            node_color_map[node] = color_palette[color_index % len(color_palette)]
+            color_index += 1
+
+    return render_template('power_domain.html', 
+                           controllers=power_domain_controllers,
+                           relations=power_domain_relations,
+                           node_color_map=node_color_map)
+
+# 时钟树页面
+@app.route('/clock_tree')
+def clock_tree():
+    root = get_parsed_root()
+    if not root:
+        return "尚未选择或上传有效的 dts 文件", 400
+    global clock_controllers, clock_relations
+    # 为满足(1.3)的要求，需要找出被多个时钟控制器控制的节点，并为其分配相同的背景色
+    node_clock_counts = {}
+    for cc, node in clock_relations:
+        node_clock_counts.setdefault(node, 0)
+        node_clock_counts[node] += 1
+
+    # 生成颜色映射
+    color_palette = ["#FFA07A", "#20B2AA", "#9370DB", "#3CB371", "#FF6347"]  # 颜色列表
+    node_color_map = {}
+    color_index = 0
+    for node, count in node_clock_counts.items():
+        if count > 1:
+            node_color_map[node] = color_palette[color_index % len(color_palette)]
+            color_index += 1
+
+    return render_template('clock_tree.html',
+                           controllers=clock_controllers,
+                           relations=clock_relations,
+                           node_color_map=node_color_map)
+
+def get_parsed_root():
+    dts_file = get_current_dts_file()
+    if not dts_file:
+        return None
+    return parse_dts_file(dts_file)
+
+# 内存树页面
+@app.route('/memory_tree')
+def memory_tree():
+    root = get_parsed_root()
+    if not root:
+        return "尚未选择或上传有效的 dts 文件", 400
+    global memory_node, reserved_memory_nodes
+    return render_template('memory_tree.html', 
+                           memory_node=memory_node,
+                           reserved_nodes=reserved_memory_nodes)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

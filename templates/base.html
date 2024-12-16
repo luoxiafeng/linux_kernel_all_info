@@ -1,6 +1,6 @@
-<!-- Version: v1.2 -->
+<!-- templates/base.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +15,7 @@
         }
 
         .sidebar {
-            width: 10%; /* 左侧菜单栏宽度调整为减少30%，即从66.67%变为10% */
+            width: 15%;
             background: #2c3e50;
             color: white;
             padding: 20px 15px;
@@ -59,15 +59,14 @@
         }
 
         #device-tree {
-            margin-left: 10%; /* 右侧内容区域宽度调整为剩余的80% */
+            margin-left: 15%;
             padding: 20px;
             flex-grow: 1;
             overflow-y: auto;
-            width: 80%; /* 设置为80% */
+            width: 85%;
             box-sizing: border-box;
         }
 
-        /* 树形结构样式 */
         ul, li {
             margin: 0;
             padding: 0;
@@ -75,8 +74,8 @@
         }
 
         .children {
-            margin-left: 20px; /* 子节点左侧缩进 */
-            display: none; /* 默认折叠 */
+            margin-left: 20px;
+            display: none;
         }
 
         .node {
@@ -97,9 +96,45 @@
             color: #555;
         }
 
-        /* 新增的层次关系样式 */
         .sidebar ul li > ul {
-            margin-left: 20px; /* 子菜单项相对父菜单项缩进 */
+            margin-left: 20px;
+        }
+
+        /* 新增的样式用于背景色高亮 */
+        .highlight {
+            background-color: yellow;
+            cursor: pointer;
+        }
+
+        .highlight-green {
+            background-color: #ADFF2F;
+            cursor: pointer;
+        }
+
+        .highlight-pink {
+            background-color: #FF69B4;
+            cursor: pointer;
+        }
+
+        .highlight-blue {
+            background-color: #87CEFA;
+            cursor: pointer;
+        }
+
+        .highlight-gray {
+            background-color: #D3D3D3;
+            cursor: pointer;
+        }
+
+        /* 确保 interrupt-tree 类的链接可点击 */
+        .interrupt-tree a {
+            pointer-events: auto;
+            color: #007BFF;
+            text-decoration: none;
+        }
+
+        .interrupt-tree a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -115,6 +150,11 @@
                     <li><a href="{{ url_for('node_paths') }}" onclick="keepSubmenuOpen(event)">节点路径</a></li>
                     <li><a href="{{ url_for('content') }}" onclick="keepSubmenuOpen(event)">节点内容</a></li>
                     <li><a href="{{ url_for('interrupt_tree') }}" onclick="keepSubmenuOpen(event)">中断树</a></li>
+                    <!-- ---- 修改开始：新增电源域、时钟树、内存树子菜单项 ---- -->
+                    <li><a href="{{ url_for('power_domain') }}" onclick="keepSubmenuOpen(event)">电源域</a></li>
+                    <li><a href="{{ url_for('clock_tree') }}" onclick="keepSubmenuOpen(event)">时钟树</a></li>
+                    <li><a href="{{ url_for('memory_tree') }}" onclick="keepSubmenuOpen(event)">内存树</a></li>
+                    <!-- ---- 修改结束 ---- -->
                 </ul>
             </li>
         </ul>
@@ -124,32 +164,29 @@
     </div>
 
     <script>
-        var isDeviceTreeOpen = false; // 用来跟踪“设备树”菜单是否展开
+        var isDeviceTreeOpen = false;
 
-        // 在页面加载时根据 sessionStorage 判断是否展开菜单
         window.onload = function() {
             var savedState = sessionStorage.getItem('deviceTreeState');
             if (savedState === 'open') {
                 document.getElementById("device-tree-menu").style.display = 'block';
                 isDeviceTreeOpen = true;
             }
-            collapseAll(); // 页面加载时收起所有节点
+            collapseAll();
         };
 
-        // 控制"设备树"菜单展开与收起
         function toggleDeviceTree() {
             var menu = document.getElementById("device-tree-menu");
             if (isDeviceTreeOpen) {
                 menu.style.display = "none";
-                sessionStorage.setItem('deviceTreeState', 'closed'); // 保存菜单状态为关闭
+                sessionStorage.setItem('deviceTreeState', 'closed');
             } else {
                 menu.style.display = "block";
-                sessionStorage.setItem('deviceTreeState', 'open'); // 保存菜单状态为展开
+                sessionStorage.setItem('deviceTreeState', 'open');
             }
-            isDeviceTreeOpen = !isDeviceTreeOpen; // 切换状态
+            isDeviceTreeOpen = !isDeviceTreeOpen;
         }
 
-        // 控制子节点展开与收起
         function toggleChildren(element) {
             var children = element.nextElementSibling;
             if (children && children.style.display !== undefined) {
@@ -161,41 +198,39 @@
             }
         }
 
-        // 控制内容展示与收起
         function toggleContent(element) {
             var content = element.nextElementSibling;
             if (content.style.display === "block") {
-                content.style.display = "none"; // 隐藏内容
+                content.style.display = "none";
             } else {
-                content.style.display = "block"; // 显示内容
+                content.style.display = "block";
             }
         }
 
         function expandAll() {
             var allChildren = document.querySelectorAll('.children');
             allChildren.forEach(function(child) {
-                child.style.display = "block"; // 展开所有子节点
+                child.style.display = "block";
             });
 
             var allContents = document.querySelectorAll('.content');
             allContents.forEach(function(content) {
-                content.style.display = "block"; // 展开所有内容
+                content.style.display = "block";
             });
         }
 
         function collapseAll() {
             var allChildren = document.querySelectorAll('.children');
             allChildren.forEach(function(child) {
-                child.style.display = "none"; // 收起所有子节点
+                child.style.display = "none";
             });
 
             var allContents = document.querySelectorAll('.content');
             allContents.forEach(function(content) {
-                content.style.display = "none"; // 收起所有内容
+                content.style.display = "none";
             });
         }
 
-        // 阻止点击子菜单项后关闭菜单
         function keepSubmenuOpen(event) {
             event.stopPropagation();
         }

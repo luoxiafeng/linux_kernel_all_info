@@ -1,0 +1,10 @@
+<!-- Version: v2.9 -->
+{% extends "base.html" %}
+
+{% block content %}
+<h2>时钟树关系图</h2>
+<p>下面是根据当前设备树生成的时钟树PlantUML代码，可将此代码复制到 <a href="http://www.plantuml.com/plantuml" target="_blank">PlantUML在线工具</a> 中查看。</p>
+<pre style="background: #f0f0f0; padding: 10px; white-space: pre-wrap;">
+{{ uml_code }}
+</pre>
+{% endblock %}

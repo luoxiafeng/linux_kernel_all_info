@@ -1,0 +1,35 @@
+<!-- Version: v2.9 -->
+{% extends "base.html" %}
+
+{% block content %}
+<h2>电源域列表</h2>
+<p>以下是电源域控制器节点和使用电源域的节点关系。</p>
+
+<h3>电源域控制器节点列表</h3>
+<ul>
+{% for pd in controllers %}
+    <li>{{ pd.name }} (phandle: {{ pd.attr.phandle }})</li>
+{% endfor %}
+</ul>
+
+<h3>电源域关系</h3>
+<ul>
+{% for pd in controllers %}
+    <li>
+        <strong>{{ pd.name }} (phandle: {{ pd.attr.phandle }})</strong>
+        <ul>
+        {% for relation in relations %}
+            {% if relation[0] == pd %}
+                {% set node = relation[1] %}
+                {% if node in node_color_map %}
+                    <li class="highlight" title="被多个电源域控制">{{ node.name }}</li>
+                {% else %}
+                    <li>{{ node.name }}</li>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        </ul>
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}

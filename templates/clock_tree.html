@@ -1,0 +1,35 @@
+<!-- Version: v2.9 -->
+{% extends "base.html" %}
+
+{% block content %}
+<h2>时钟树列表</h2>
+<p>以下是时钟控制器节点和使用时钟的节点关系。</p>
+
+<h3>时钟控制器节点列表</h3>
+<ul>
+{% for cc in controllers %}
+    <li>{{ cc.name }} (phandle: {{ cc.attr.phandle }})</li>
+{% endfor %}
+</ul>
+
+<h3>时钟关系</h3>
+<ul>
+{% for cc in controllers %}
+    <li>
+        <strong>{{ cc.name }} (phandle: {{ cc.attr.phandle }})</strong>
+        <ul>
+        {% for relation in relations %}
+            {% if relation[0] == cc %}
+                {% set node = relation[1] %}
+                {% if node in node_color_map %}
+                    <li class="highlight" title="被多个时钟控制器控制">{{ node.name }}</li>
+                {% else %}
+                    <li>{{ node.name }}</li>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        </ul>
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}
