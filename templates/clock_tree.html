@@ -1,35 +1,80 @@
-<!-- Version: v2.9 -->
 {% extends "base.html" %}
 
 {% block content %}
-<h2>时钟树列表</h2>
-<p>以下是时钟控制器节点和使用时钟的节点关系。</p>
+<h2>时钟树</h2>
+<div>
+    {% for controller, nodes in controller_mapping.items() %}
+    <!-- 控制器 -->
+    <div style="margin-bottom: 20px;">
+        <!-- 控制器名称 -->
+        <div class="highlight-blue" style="padding: 10px; font-weight: bold;">
+            <span class="node" onclick="toggleNodeDetails('{{ controller.name }}')">
+                {{ controller.name }}
+            </span>
+        </div>
 
-<h3>时钟控制器节点列表</h3>
-<ul>
-{% for cc in controllers %}
-    <li>{{ cc.name }} (phandle: {{ cc.attr.phandle }})</li>
-{% endfor %}
-</ul>
+        <!-- 控制器属性和内容 -->
+        <div id="details-{{ controller.name }}" style="display: none; padding-left: 20px; border-left: 2px solid #007BFF;">
+            <h4>属性</h4>
+            <code>
+                addr_cells: {{ controller.attr.addr_cells }}<br>
+                size_cells: {{ controller.attr.size_cells }}<br>
+                refnodeattr: {{ controller.attr.refnodeattr }}<br>
+                phandle: {{ controller.attr.phandle }}<br>
+                compatible: {{ controller.attr.compatible }}<br>
+                regaddr: {{ controller.attr.regaddr }}<br>
+                regsize: {{ controller.attr.regsize }}
+            </code>
+            <h4>内容</h4>
+            <code>
+                {% for line in controller.content %}
+                {{ line }}<br>
+                {% endfor %}
+            </code>
+        </div>
 
-<h3>时钟关系</h3>
-<ul>
-{% for cc in controllers %}
-    <li>
-        <strong>{{ cc.name }} (phandle: {{ cc.attr.phandle }})</strong>
-        <ul>
-        {% for relation in relations %}
-            {% if relation[0] == cc %}
-                {% set node = relation[1] %}
-                {% if node in node_color_map %}
-                    <li class="highlight" title="被多个时钟控制器控制">{{ node.name }}</li>
-                {% else %}
-                    <li>{{ node.name }}</li>
-                {% endif %}
-            {% endif %}
-        {% endfor %}
+        <!-- 挂载节点 -->
+        <ul style="list-style: none; padding-left: 20px;">
+            {% for node in nodes %}
+            <li>
+                <span class="node" onclick="toggleNodeDetails('{{ node.name }}')">
+                    {{ controller.name }} → {{ node.name }}
+                </span>
+
+                <!-- 挂载节点的属性和内容 -->
+                <div id="details-{{ node.name }}" style="display: none; padding-left: 20px; border-left: 2px solid #007BFF;">
+                    <h4>属性</h4>
+                    <code>
+                        addr_cells: {{ node.attr.addr_cells }}<br>
+                        size_cells: {{ node.attr.size_cells }}<br>
+                        refnodeattr: {{ node.attr.refnodeattr }}<br>
+                        phandle: {{ node.attr.phandle }}<br>
+                        compatible: {{ node.attr.compatible }}<br>
+                        regaddr: {{ node.attr.regaddr }}<br>
+                        regsize: {{ node.attr.regsize }}
+                    </code>
+                    <h4>内容</h4>
+                    <code>
+                        {% for line in node.content %}
+                        {{ line }}<br>
+                        {% endfor %}
+                    </code>
+                </div>
+            </li>
+            {% endfor %}
         </ul>
-    </li>
-{% endfor %}
-</ul>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    function toggleNodeDetails(nodeName) {
+        const details = document.getElementById(`details-${nodeName}`);
+        if (details.style.display === "none") {
+            details.style.display = "block";
+        } else {
+            details.style.display = "none";
+        }
+    }
+</script>
 {% endblock %}

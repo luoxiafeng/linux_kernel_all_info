@@ -601,15 +601,35 @@ def power_domain():
     root = get_parsed_root()
     if not root:
         return "尚未选择或上传有效的 dts 文件", 400
+
     global power_domain_controllers, power_domain_relations
-    # 为满足(2.2)的要求，需要找出被多个电源域控制的节点，并为其分配相同的背景色
-    node_domain_counts = {}
+
+    # 构建电源域与挂载节点的关系
+    controller_mapping = {}
+    for controller in power_domain_controllers:
+        controller_mapping[controller] = []
+
     for pd, node in power_domain_relations:
-        node_domain_counts.setdefault(node, 0)
-        node_domain_counts[node] += 1
+        controller_mapping[pd].append(node)
+
+    # 按控制器名字排序
+    sorted_controller_mapping = dict(sorted(controller_mapping.items(), key=lambda item: item[0].name.lower()))
+
+    # 挂载节点按名字排序
+    for controller in sorted_controller_mapping:
+        sorted_controller_mapping[controller] = sorted(
+            sorted_controller_mapping[controller], key=lambda node: node.name.lower()
+        )
+
+    # 为满足(2.2)要求，标记被多个电源域挂载的节点
+    node_domain_counts = {}
+    for controller, nodes in sorted_controller_mapping.items():
+        for node in nodes:
+            node_domain_counts.setdefault(node, 0)
+            node_domain_counts[node] += 1
 
     # 生成颜色映射
-    color_palette = ["#FFD700", "#ADFF2F", "#FF69B4", "#87CEFA", "#FFA07A"]  # 颜色列表
+    color_palette = ["#FFD700", "#ADFF2F", "#FF69B4", "#87CEFA", "#FFA07A"]
     node_color_map = {}
     color_index = 0
     for node, count in node_domain_counts.items():
@@ -617,10 +637,11 @@ def power_domain():
             node_color_map[node] = color_palette[color_index % len(color_palette)]
             color_index += 1
 
-    return render_template('power_domain.html', 
-                           controllers=power_domain_controllers,
-                           relations=power_domain_relations,
-                           node_color_map=node_color_map)
+    return render_template(
+        'power_domain.html',
+        controller_mapping=sorted_controller_mapping,
+        node_color_map=node_color_map
+    )
 
 # 时钟树页面
 @app.route('/clock_tree')
@@ -628,26 +649,40 @@ def clock_tree():
     root = get_parsed_root()
     if not root:
         return "尚未选择或上传有效的 dts 文件", 400
+
     global clock_controllers, clock_relations
-    # 为满足(1.3)的要求，需要找出被多个时钟控制器控制的节点，并为其分配相同的背景色
-    node_clock_counts = {}
+
+    # 构建控制器与挂载节点的关系
+    controller_mapping = {}
+    for controller in clock_controllers:
+        controller_mapping[controller] = []
+
     for cc, node in clock_relations:
-        node_clock_counts.setdefault(node, 0)
-        node_clock_counts[node] += 1
+        controller_mapping[cc].append(node)
 
-    # 生成颜色映射
-    color_palette = ["#FFA07A", "#20B2AA", "#9370DB", "#3CB371", "#FF6347"]  # 颜色列表
+    # 按控制器名字排序
+    sorted_controller_mapping = dict(sorted(controller_mapping.items(), key=lambda item: item[0].name.lower()))
+
+    # 挂载节点按名字排序
+    for controller in sorted_controller_mapping:
+        sorted_controller_mapping[controller] = sorted(
+            sorted_controller_mapping[controller], key=lambda node: node.name.lower()
+        )
+
+    # 为每个控制器生成高亮颜色
+    color_palette = ["#ADD8E6", "#90EE90", "#FFB6C1", "#FFA07A", "#D8BFD8"]
     node_color_map = {}
-    color_index = 0
-    for node, count in node_clock_counts.items():
-        if count > 1:
-            node_color_map[node] = color_palette[color_index % len(color_palette)]
-            color_index += 1
+    for idx, controller in enumerate(sorted_controller_mapping.keys()):
+        node_color_map[controller] = color_palette[idx % len(color_palette)]
 
-    return render_template('clock_tree.html',
-                           controllers=clock_controllers,
-                           relations=clock_relations,
-                           node_color_map=node_color_map)
+    return render_template(
+        'clock_tree.html',
+        controller_mapping=sorted_controller_mapping,
+        node_color_map=node_color_map
+    )
+
+
+
 
 def get_parsed_root():
     dts_file = get_current_dts_file()
