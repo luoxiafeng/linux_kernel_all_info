@@ -1,4 +1,4 @@
-<!-- Version: v2.9 -->
+<!-- Version: v3.3 -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -8,39 +8,33 @@
     <p>物理地址和大小（从reg属性中获取）:</p>
     <table border="1" cellpadding="5" cellspacing="0">
         <tr>
-            <th>Base Address</th>
-            <th>Size</th>
-            <th>Type</th>
+            <th scope="col">Base Address</th>
+            <th scope="col">Size</th>
+            <th scope="col">Type</th>
+            <th scope="col">Node Name</th>
         </tr>
-        {% if memory_node.attr.regaddr and memory_node.attr.regsize %}
-            <tr>
-                <td>0x{{ '%X'|format(memory_node.attr.regaddr[0]) }}</td>
-                <td>0x{{ '%X'|format(memory_node.attr.regsize[0]) }}</td>
-                <td>System Memory</td>
+        {% for region in all_regions %}
+            <tr {% if region.type == 'Reserved' %}style="background-color: #D3D3D3;"{% endif %}>
+                <td>
+                    {% if region.address is not none %}
+                        0x{{ '%X'|format(region.address) }} ({{ (region.address / (1024 * 1024 * 1024))|round(2) }} GB)
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td>
+                    {% if region.size is not none %}
+                        0x{{ '%X'|format(region.size) }} ({{ (region.size / (1024 * 1024 * 1024))|round(2) }} GB)
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td>{{ region.type }}</td>
+                <td>{{ region.name }}</td>
             </tr>
-            {% for rn in reserved_nodes %}
-                {% if rn.attr.regaddr and rn.attr.regsize %}
-                    <tr style="background-color: #D3D3D3;">
-                        <td>0x{{ '%X'|format(rn.attr.regaddr[0]) }}</td>
-                        <td>0x{{ '%X'|format(rn.attr.regsize[0]) }}</td>
-                        <td>Reserved</td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td>N/A</td>
-                        <td>N/A</td>
-                        <td>Reserved (No reg info)</td>
-                    </tr>
-                {% endif %}
-            {% endfor %}
-        {% else %}
-            <tr>
-                <td colspan="3">没有从该节点中获取到reg信息</td>
-            </tr>
-        {% endif %}
+        {% endfor %}
     </table>
 {% else %}
     <p>没有找到memory节点（或以memory开头的节点）</p>
 {% endif %}
-
 {% endblock %}

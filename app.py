@@ -234,10 +234,10 @@ def parse_dts_file(dts_file):
                             raise ValueError(f"Incomplete reg group: {group}")
                         regaddr = 0
                         for j in range(addr_cells):
-                            regaddr = (regaddr << 8) | group[j]
+                            regaddr = (regaddr << 32) | group[j]
                         regsize = 0
                         for j in range(addr_cells, step):
-                            regsize = (regsize << 8) | group[j]
+                            regsize = (regsize << 32) | group[j]
                         regaddr_list.append(regaddr)
                         regsize_list.append(regsize)
                     current_node.attr.regaddr = regaddr_list
@@ -696,10 +696,53 @@ def memory_tree():
     root = get_parsed_root()
     if not root:
         return "尚未选择或上传有效的 dts 文件", 400
+    
     global memory_node, reserved_memory_nodes
+    
+    all_regions = []
+    
+    # 处理 memory_node
+    if memory_node and memory_node.attr.regaddr and memory_node.attr.regsize:
+        for i in range(len(memory_node.attr.regaddr)):
+            all_regions.append({
+                'address': memory_node.attr.regaddr[i],
+                'size': memory_node.attr.regsize[i],
+                'type': 'System Memory',
+                'name': memory_node.name
+            })
+    
+    # 处理 reserved_memory_nodes
+    for rn in reserved_memory_nodes:
+        if rn.attr.regaddr and rn.attr.regsize:
+            for j in range(len(rn.attr.regaddr)):
+                all_regions.append({
+                    'address': rn.attr.regaddr[j],
+                    'size': rn.attr.regsize[j],
+                    'type': 'Reserved',
+                    'name': rn.name
+                })
+        else:
+            all_regions.append({
+                'address': None,
+                'size': None,
+                'type': 'Reserved (No reg info)',
+                'name': rn.name
+            })
+
+    # 排序函数
+    def sort_key(x):
+        if x['address'] is not None and x['size'] is not None:
+            return x['address'] + x['size']
+        return float('inf')  # 将没有地址或大小信息的项放到最后
+
+    # 对 all_regions 进行排序
+    all_regions.sort(key=sort_key)
+
     return render_template('memory_tree.html', 
                            memory_node=memory_node,
-                           reserved_nodes=reserved_memory_nodes)
+                           reserved_nodes=reserved_memory_nodes,
+                           all_regions=all_regions)
+
 
 
 if __name__ == '__main__':
