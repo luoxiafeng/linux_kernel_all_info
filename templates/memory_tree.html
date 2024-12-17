@@ -1,4 +1,4 @@
-<!-- Version: v3.3 -->
+<!-- Version: v3.4 -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -15,14 +15,14 @@
         </tr>
         {% for region in all_regions %}
             <tr {% if region.type == 'Reserved' %}style="background-color: #D3D3D3;"{% endif %}>
-                <td>
+                <td {% if region.type == 'System Memory' %}style="background-color: #FFFF00;"{% endif %}>
                     {% if region.address is not none %}
                         0x{{ '%X'|format(region.address) }} ({{ (region.address / (1024 * 1024 * 1024))|round(2) }} GB)
                     {% else %}
                         N/A
                     {% endif %}
                 </td>
-                <td>
+                <td {% if region.type == 'System Memory' %}style="background-color: #FFFF00;"{% endif %}>
                     {% if region.size is not none %}
                         0x{{ '%X'|format(region.size) }} ({{ (region.size / (1024 * 1024 * 1024))|round(2) }} GB)
                     {% else %}
@@ -30,7 +30,13 @@
                     {% endif %}
                 </td>
                 <td>{{ region.type }}</td>
-                <td>{{ region.name }}</td>
+                <td>
+                    {% if region.name.startswith('memory') %}
+                        物理内存颗粒
+                    {% else %}
+                        {{ region.name }}
+                    {% endif %}
+                </td>
             </tr>
         {% endfor %}
     </table>
